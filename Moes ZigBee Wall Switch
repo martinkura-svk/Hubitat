@@ -8,13 +8,13 @@ metadata {
 //         capability "Configuration"
         capability "Refresh"
         capability "Switch"
-        capability "Health Check"
+//        capability "Health Check"
         
         fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_amp6tsvy", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"42", deviceJoinName: "Moes 1-Gang Switch / ZTS-EU1"
-		fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_g1ib5ldv", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"42", deviceJoinName: "Moes 2-Gang Switch / ZTS-EU2"
+	fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_g1ib5ldv", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"42", deviceJoinName: "Moes 2-Gang Switch / ZTS-EU2"
         fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_tz32mtza", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"42", deviceJoinName: "Moes 3-Gang Switch / ZTS-EU3"
     }
-	    attribute "switch","enum",["on","off"]
+	attribute "switch","enum",["on","off"]
         attribute "switchLightMode","enum",["OFF", "ON", "Position"]
         attribute "relayMode","enum",["OFF", "ON", "Last state"]
         attribute "lastCheckin", "string"
