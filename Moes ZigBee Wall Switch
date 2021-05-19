@@ -2,7 +2,7 @@ import hubitat.device.HubAction
 import hubitat.device.Protocol
 
 metadata {
-    definition (name: "Moes ZigBee Wall Switch 1/2/3-Gang", namespace: "Moes 1.26-beta", author: "Martin Kura") {
+    definition (name: "Moes ZigBee Wall Switch 1/2/3-Gang", namespace: "Moes 1.27-beta", author: "Martin Kura") {
         capability "Initialize"
         capability "Actuator"
 //         capability "Configuration"
@@ -178,10 +178,13 @@ def setupChildDevices() {
     deleteObsoleteChildren() 
     def buttons = 0
     switch (device.data.manufacturer) {
+        case '_TZE200_amp6tsvy':
+            buttons = 1
+        break
         case '_TZE200_g1ib5ldv':
             buttons = 2
         break
-		case '_TZE200_tz32mtza':
+	case '_TZE200_tz32mtza':
             buttons = 3
         break
     }
@@ -192,9 +195,9 @@ def setupChildDevices() {
 def createChildDevices(int buttons) {
     if (debugLogging) log.debug "Parent createChildDevices"
     
-    if (buttons == 0)
-        return            
-    
+    if (buttons <= 1)
+        return 
+        
     for (i in 1..buttons) {
         def childId = "${device.id}-0${i}"
         def existingChild = getChildDevices()?.find { it.deviceNetworkId == childId}
