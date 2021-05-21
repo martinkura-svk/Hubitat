@@ -2,16 +2,15 @@ import hubitat.device.HubAction
 import hubitat.device.Protocol
 
 metadata {
-    definition (name: "Moes ZigBee Wall Switch 1/2/3-Gang", namespace: "Moes 1.28-beta", author: "Martin Kura") {
+    definition (name: "Moes ZigBee Wall Switch 1/2/3-Gang", namespace: "Moes 1.3", author: "Martin Kura") {
         capability "Initialize"
         capability "Actuator"
  //       capability "Configuration"
         capability "Refresh"
         capability "Switch"
- //       capability "Health Check"
         
         fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_amp6tsvy", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"42", deviceJoinName: "Moes 1-Gang Switch / ZTS-EU1"
-		fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_g1ib5ldv", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"42", deviceJoinName: "Moes 2-Gang Switch / ZTS-EU2"
+	fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_g1ib5ldv", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"42", deviceJoinName: "Moes 2-Gang Switch / ZTS-EU2"
         fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_tz32mtza", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"42", deviceJoinName: "Moes 3-Gang Switch / ZTS-EU3"
     }
         attribute "switchLightMode","enum",["OFF", "ON", "Position"]
@@ -20,10 +19,10 @@ metadata {
 
     preferences {
         input(name: "switchLightMode", type: "enum", title: ("Switch Backlight Mode"), description: ("- select type of backlight indicator (default: Position)"), options: ["OFF", "ON", "Position"], defaultValue: "Position", submitOnChange: true)
-		input(name: "relayMode", type: "enum", title: ("Switch Relay Mode"), description: ("- select relay renew state after AC failed (default: OFF)"), options: ["OFF", "ON", "Last state"], defaultValue: "OFF", submitOnChange: true)
+	input(name: "relayMode", type: "enum", title: ("Switch Relay Mode"), description: ("- select relay renew state after AC failed (default: OFF)"), options: ["OFF", "ON", "Last state"], defaultValue: "OFF", submitOnChange: true)
         input(name: "debugLogging", type: "bool", title: ("Enable debug logging"), description: "", defaultValue: false, submitOnChange: true, displayDuringSetup: false, required: false)
         input(name: "infoLogging", type: "bool", title: ("Enable info logging"), description: "", defaultValue: true, submitOnChange: true, displayDuringSetup: false, required: false)
-    	}
+    }
 }
 
 def initialize() {
@@ -32,7 +31,7 @@ def initialize() {
     device.updateSetting("switchLightMode",[type:"enum",value:"Position"])
     device.updateSetting("relayMode",[type:"enum",value:"OFF"])
     device.updateSetting("debugLogging",[type:"bool",value:"false"])
-	device.updateSetting("infoLogging",[type:"bool",value:"true"])
+    device.updateSetting("infoLogging",[type:"bool",value:"true"])
     refresh()
 }
 
@@ -41,17 +40,17 @@ def initialize() {
    
     def cmds = [
             //bindings
-            "zdo bind 0x${device.deviceNetworkId} 0x01 0x00 0xEF00 {${device.zigbeeId}} {}", "delay 200",
-            "zdo bind 0x${device.deviceNetworkId} 0x01 0x01 0xEF00 {${device.zigbeeId}} {}", "delay 200",
+            //"zdo bind 0x${device.deviceNetworkId} 0x01 0x00 0xEF00 {${device.zigbeeId}} {}", "delay 200",
+            //"zdo bind 0x${device.deviceNetworkId} 0x01 0x01 0xEF00 {${device.zigbeeId}} {}", "delay 200",
             //"zdo bind 0x${device.deviceNetworkId} 0x${device.endpointId} 0x01 0x0004 {${device.zigbeeId}} {}", "delay 200",
             //"zdo bind 0x${device.deviceNetworkId} 0x${device.endpointId} 0x01 0x0005 {${device.zigbeeId}} {}", "delay 200",
             //reporting
-            "he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0 0x00 0 0xFFFF {}","delay 200",
-            "he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0 0x01 0 0xFFFF {}", "delay 200",
+            //"he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0 0x00 0 0xFFFF {}","delay 200",
+            //"he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0 0x01 0 0xFFFF {}", "delay 200",
             //"he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0x0300 0 0x0000 0 0xFFFF {}", "delay 200",
-           //"he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0x0300 0 0x0001 0 0xFFFF {}", "delay 200",
-           // "he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0x0300 0 0x0007 0 0xFFFF {}", "delay 200",
-           // "he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0x0300 0 0x0008 1 0xFFFE {}", "delay 200",
+            //"he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0x0300 0 0x0001 0 0xFFFF {}", "delay 200",
+            //"he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0x0300 0 0x0007 0 0xFFFF {}", "delay 200",
+            //"he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0x0300 0 0x0008 1 0xFFFE {}", "delay 200",
     ] + refresh()
     return cmds
     
@@ -70,73 +69,61 @@ def updated() {
     switchLightModeConfig() + relayModeConfig()
 }
 
+private getCLUSTER_TUYA() { 0xEF00 }
+private getSETDATA() { 0x00 }
+
 // Parse incoming device messages to generate events
 def parse(String description) {
-    Map map = [:]
-    //def event = zigbee.getEvent(description)
-
-    if (description?.startsWith('catchall:')) {
-        if (debugLogging) log.debug "///Parsing...///    ${description}"
-        // call parseCatchAllMessage to parse the catchall message received
-        map = parseCatchAllMessage(description)
-        if (map != [:]) {
-          if (debugLogging) log.debug "ok send event: $map.name $map.value"
-            sendEvent(name: map.name, value: map.value)
-        }
-    }
-    else {
-        log.warn "DID NOT PARSE MESSAGE for description : $description"
-    }
-}
-
-/*
-// Parse incoming device messages to generate events
-def parse(String description) {
-    if (debugLogging) log.debug "///parse code/// - ${description}"
-    if (description.startsWith('catchall:'))                  // not something we can handle
-    def descMap = zigbee.parseDescriptionAsMap(description)
-    if (debugLogging) log.debug "parse - DescMap: ${descMap}"
-    // ... normal packet
-    	if (descMap.cluster == "EF00" && descMap.command =="01") {
-// descMap.command =="0A" - switch toggled physically
-// descMap.command =="01" - get switch status
-def cd = getChildDevice(${childDevice.deviceNetworkId})
-if (cd == null) {
-log.warn "Child device ${childDevice.deviceNetworkId} not found. Initialise parent device first"
-return
-}
-def switchAttribute = descMap.data == "${fullDataOn}" ? "on" : "off"
-if (descMap.command =="01") {
-// switch toggled
-cd.parse([[name: "switch", value:switchAttribute, descriptionText: "Child switch ${childDevice.deviceNetworkId} turned $switchAttribute"]])
-} else if (descMap.command =="01") {
-// report switch status
-cd.parse([[name: "switch", value:switchAttribute, descriptionText: "Child switch ${childDevice.deviceNetworkId} is $switchAttribute"]])
-}
-
-   if (switchAttribute == "on") {
-       if (debugLogging) log.debug "Parent switch on"
-       return createEvent(name: "switch", value: "on")
-   } else if (switchAttribute == "off") {
-        def cdsOn = 0
-        // cound number of switches on
-        getChildDevices().each {child ->
-            if (getChildId(child) != descMap.endpoint && child.currentValue('switch') == "on") {
+	if (description?.startsWith('catchall:') || description?.startsWith('read attr -')) {
+		Map descMap = zigbee.parseDescriptionAsMap(description)        
+		if (descMap?.clusterInt==CLUSTER_TUYA) {
+        	if (debugLogging) log.debug descMap
+			if ( descMap?.command == "01" || descMap?.command == "00" ) {
+				def switchFunc = (descMap?.data[2])
+                def switchAttr = (descMap?.data[3])   
+                def switchState = (descMap?.data[6]) == "01" ? "on" : "off"
+                if (debugLogging) log.debug "Function =  ${switchFunc}  ///  Attribute =  ${switchAttr}  ///  State =  ${switchState}"
+                if (switchFunc <= "04" && switchAttr =="01") {
+                   def cd = getChildDevice("${device.id}-${switchFunc}")
+						if (cd == null) {
+						log.warn "Child device ${device.id}-${manufacturer} not found. Initialise parent device first"
+						return
+						}
+			if (descMap?.command == "00") {
+			// switch toggled
+			cd.parse([[name: "switch", value:switchState, descriptionText: "Child switch ${switchFunc} turned $switchState"]])
+			} 
+			else if (descMap?.command == "01") {
+            // report switch status
+            cd.parse([[name: "switch", value:switchState, descriptionText: "Child switch  ${switchFunc} is $switchState"]])
+			}
+            if (switchState == "on") {
+			if (debugLogging) log.debug "Parent Switch ON"
+			return createEvent(name: "switch", value: "on")
+			} 
+			else if (switchState == "off") {
+			def cdsOn = 0
+			// cound number of switches on
+			getChildDevices().each {child ->
+            if (getChildId(child) != switchFunc && child.currentValue('switch') == "on") {
                 cdsOn++
             }
-        }
-        if (cdsOn == 0) {
-            if (debugLogging) log.debug "Parent switch off"
+			}
+			if (cdsOn == 0) {
+            if (debugLogging) log.debug "Parent Switch OFF"
             return createEvent(name: "switch", value: "off")
-        }
-     }
-  }
-}  */ 
+			}    
+			}
+                }
+			}
+		}
+	}
+}   
 
-def lastCheckin() {    //  send event for heartbeat 
+def lastCheckin() {    // send event for heartbeat 
     def now = new Date()
     sendEvent(name: "lastCheckin", value: now)
-        }
+}
 
 def off() {
     if (infoLogging) log.info "Turn all switches OFF"	
@@ -155,16 +142,12 @@ def on() {
 }
 
 def refresh() {
-	if (debugLogging) log.debug "Refreshing..."
-    //"he rattr 0x${device.deviceNetworkId} 0x01 0xEF00 0x01"
+    if (debugLogging) log.debug "Refreshing..."
     return  [
     "he rattr 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x01 {}","delay 200",  //light state
+     //"he rattr 0x${device.deviceNetworkId} 0x${device.endpointId} 0x0005 0x00 {}","delay 200",  //
     lastCheckin()
-    ]    
-}
-
-private Integer convertHexToInt(hex) {
-	Integer.parseInt(hex,16)
+    ]   
 }
 
 private String getChildId(childDevice) {
@@ -177,7 +160,7 @@ def componentOn(childDevice) {
     String fullDataOn = "0001" + getChildId(childDevice) + "01000101"
     sendHubCommand(new HubAction("he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${fullDataOn}}", Protocol.ZIGBEE))
     if (debugLogging) log.debug "{executed} 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${fullDataOn}}"
-    }
+}
 
 def componentOff(childDevice) {
     if (debugLogging) log.debug "component is OFF - ${childDevice} {${childDevice.deviceNetworkId}}"
@@ -185,7 +168,7 @@ def componentOff(childDevice) {
     String fullDataOff = "0001" + getChildId(childDevice) + "01000100"
     sendHubCommand(new HubAction("he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${fullDataOff}}", Protocol.ZIGBEE))
     if (debugLogging) log.debug "{executed} 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${fullDataOff}}"
-    }
+}
 
 def componentRefresh(childDevice) {
     if (debugLogging) log.debug "component refresh ${childDevice.deviceNetworkId} ${childDevice}"    
@@ -225,7 +208,8 @@ def createChildDevices(int buttons) {
     
         if (existingChild) {
             if (infoLogging) log.info "Child device ${childId} already exists (${existingChild})"
-        } else {
+        } 
+	    else {
             if (infoLogging) log.info "Creating device ${childId}"
             addChildDevice("hubitat", "Generic Component Switch", childId, [isComponent: true, name: "Switch EP0${i}", label: "${device.displayName} EP0${i}"])
         }
@@ -245,21 +229,21 @@ def deleteObsoleteChildren() {
 
 def switchLightModeConfig(){
 def cmds = []
-     switch(switchLightMode) {
+    switch(switchLightMode) {
         case "OFF":
          if (infoLogging) log.info "Backlight - OFF"
-		 zigbee.command(0xEF00, 0x0, "00010f04000100")
+	 zigbee.command(0xEF00, 0x0, "00010f04000100")
         break
         case "ON":
          if (infoLogging) log.info "Backlight - ON"
-		 zigbee.command(0xEF00, 0x0, "00010f04000101")
+	 zigbee.command(0xEF00, 0x0, "00010f04000101")
         break
         case "Position":
          if (infoLogging) log.info "Backlight - position"
-		 zigbee.command(0xEF00, 0x0, "00010f04000102")
+	 zigbee.command(0xEF00, 0x0, "00010f04000102")
         break
-         }
-    } 
+    }
+} 
 
 def relayModeConfig(){
 def cmds = []
@@ -270,88 +254,11 @@ def cmds = []
         break
         case "ON":
          if (infoLogging) log.info "Relay state - ON"
- 	 	 zigbee.command(0xEF00, 0x0, "00010e04000101")
+ 	 zigbee.command(0xEF00, 0x0, "00010e04000101")
         break
         case "Last state":
          if (infoLogging) log.info "Relay state - last state"
- 	 	 zigbee.command(0xEF00, 0x0, "00010e04000102")
+ 	 zigbee.command(0xEF00, 0x0, "00010e04000102")
         break
-        }
     }
-
-private Map parseCatchAllMessage(String description) {
-    // Create a map from the raw zigbee message to make parsing more intuitive
-    def msg = zigbee.parse(description)
-    Map result = [:]
-    switch(msg.clusterId) {
-        case 0xEF00: 
-            def attribute = getAttribute(msg.data)
-            def value = getAttributeValue(msg.data)
-            def childDev = getAttributeChildDev(msg.data)
-      if (debugLogging) log.debug "///Parse code/// clusterId: ${msg.clusterId} command: ${msg.command} data: ${msg.data} value: ${value} switch: ${childDev}"      
-            switch (attribute) {
-                case "switch": 
-                    switch(value) {
-                        case 0:
-                         return createEvent(name: "switch", value: "off")
-                        break;
-
-                        case 1:
-                         return createEvent(name: "switch", value: "on")
-                        break;
-                    }
-                break;
-    }
-    
-    return result
-        }
-}
-
-private String getAttribute(ArrayList _data) {
-    String retValue1 = ""
-    if (_data.size() >= 5) {
-        if (_data[2] <= 4) {
-          retValue1 = "switch"
-        }
-        else if (_data[2] == 14 && _data[3] == 04 && _data[4] == 00) {
-            retValue1 = "relay"
-        }
-        else if (_data[2] == 15 && _data[3] == 04 && _data[4] == 00) {
-            retValue1 = "backlight"
-            }
-   
-    }
-    
-    return retValue1
-}
-
-private String getAttributeChildDev(ArrayList _data) {
-    String retValue3 = ""
-    if (_data.size() >= 5) {
-        if (_data[2] == 1) {
-          retValue3 = "child1"
-        }
-        if (_data[2] == 2) {
-          retValue3 = "child2"
-        }
-		if (_data[2] == 3) {
-          retValue3 = "child3"
-        }
-    }
-    return retValue3
-}
-
-private int getAttributeValue(ArrayList _data) {
-    int retValue2 = 0
-    
-    if (_data.size() >= 6) {
-        int dataLength = _data[5] as Integer
-        int power = 1;
-        for (i in dataLength..1) {
-            retValue2 = retValue2 + power * _data[i+5]
-            power = power * 256
-        }
-    }
-    
-    return retValue2
 }
