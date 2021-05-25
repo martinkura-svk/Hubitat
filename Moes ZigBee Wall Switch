@@ -2,10 +2,10 @@ import hubitat.device.HubAction
 import hubitat.device.Protocol
 
 metadata {
-    definition (name: "Moes ZigBee Wall Switch 1/2/3-Gang", namespace: "Moes 1.3", author: "Martin Kura") {
+    definition (name: "Moes ZigBee Wall Switch 1/2/3-Gang", namespace: "Moes 1.31", author: "Martin Kura") {
         capability "Initialize"
         capability "Actuator"
- //       capability "Configuration"
+//       capability "Configuration"
         capability "Refresh"
         capability "Switch"
         
@@ -20,19 +20,26 @@ metadata {
     preferences {
         input(name: "switchLightMode", type: "enum", title: ("Switch Backlight Mode"), description: ("- select type of backlight indicator (default: Position)"), options: ["OFF", "ON", "Position"], defaultValue: "Position", submitOnChange: true)
 	input(name: "relayMode", type: "enum", title: ("Switch Relay Mode"), description: ("- select relay renew state after AC failed (default: OFF)"), options: ["OFF", "ON", "Last state"], defaultValue: "OFF", submitOnChange: true)
-        input(name: "debugLogging", type: "bool", title: ("Enable debug logging"), description: "", defaultValue: false, submitOnChange: true, displayDuringSetup: false, required: false)
-        input(name: "infoLogging", type: "bool", title: ("Enable info logging"), description: "", defaultValue: true, submitOnChange: true, displayDuringSetup: false, required: false)
+        input(name: "debugLogging", type: "bool", title: ("Enable debug logging"), description: "", defaultValue: true, submitOnChange: true, displayDuringSetup: true)
+        input(name: "infoLogging", type: "bool", title: ("Enable info logging"), description: "", defaultValue: true, submitOnChange: true, displayDuringSetup: true)
     }
 }
 
 def initialize() {
     if (infoLogging) log.info "Initializing..."
+    log.warn "Debug logging will be automatically disabled after 30 minutes!"
     setupChildDevices()
     device.updateSetting("switchLightMode",[type:"enum",value:"Position"])
     device.updateSetting("relayMode",[type:"enum",value:"OFF"])
-    device.updateSetting("debugLogging",[type:"bool",value:"false"])
+    device.updateSetting("debugLogging",[type:"bool",value:"true"])
     device.updateSetting("infoLogging",[type:"bool",value:"true"])
+    if (debugLogging) runIn(1800,logsOff)
     refresh()
+}
+
+void logsOff(){
+    log.warn "Debug logging disabled..."
+    device.updateSetting("debugLogging",[value:"false",type:"bool"])
 }
 
 /*def configure(){
@@ -40,37 +47,44 @@ def initialize() {
    
     def cmds = [
             //bindings
-            //"zdo bind 0x${device.deviceNetworkId} 0x01 0x00 0xEF00 {${device.zigbeeId}} {}", "delay 200",
-            //"zdo bind 0x${device.deviceNetworkId} 0x01 0x01 0xEF00 {${device.zigbeeId}} {}", "delay 200",
+            "zdo bind 0x${device.deviceNetworkId} 0x01 0x00 0xEF00 {${device.zigbeeId}} {}", "delay 200",
+            "zdo bind 0x${device.deviceNetworkId} 0x01 0x01 0xEF00 {${device.zigbeeId}} {}", "delay 200",
             //"zdo bind 0x${device.deviceNetworkId} 0x${device.endpointId} 0x01 0x0004 {${device.zigbeeId}} {}", "delay 200",
             //"zdo bind 0x${device.deviceNetworkId} 0x${device.endpointId} 0x01 0x0005 {${device.zigbeeId}} {}", "delay 200",
             //reporting
-            //"he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0 0x00 0 0xFFFF {}","delay 200",
-            //"he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0 0x01 0 0xFFFF {}", "delay 200",
+            "he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0 0x00 0 0xFFFF {}","delay 200",
+            "he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0 0x01 0 0xFFFF {}", "delay 200",
             //"he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0x0300 0 0x0000 0 0xFFFF {}", "delay 200",
-            //"he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0x0300 0 0x0001 0 0xFFFF {}", "delay 200",
-            //"he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0x0300 0 0x0007 0 0xFFFF {}", "delay 200",
-            //"he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0x0300 0 0x0008 1 0xFFFE {}", "delay 200",
+           //"he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0x0300 0 0x0001 0 0xFFFF {}", "delay 200",
+           // "he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0x0300 0 0x0007 0 0xFFFF {}", "delay 200",
+           // "he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0x0300 0 0x0008 1 0xFFFE {}", "delay 200",
     ] + refresh()
     return cmds
     
 }     */ 
 
 def installed() {
-    if (debugLogging) log.debug "Parent installed"
+    log.info "Installing..."
+    log.warn "Debug logging will be automatically disabled after 30 minutes!"
+    setupChildDevices()
+    device.updateSetting("switchLightMode",[type:"enum",value:"Position"])
+    device.updateSetting("relayMode",[type:"enum",value:"OFF"])
+    device.updateSetting("debugLogging",[type:"bool",value:"true"])
+    device.updateSetting("infoLogging",[type:"bool",value:"true"])
+    if (debugLogging) runIn(1800,logsOff)
+    refresh()
 }
 
 def updated() {
     log.warn "debug logging is: ${debugLogging == true}"
     log.warn "description logging is: ${infoLogging == true}"
     if (infoLogging) log.info "Updated..."
-//    if (debugLogging) runIn(1800,logsOff)
     if (debugLogging) log.debug "Parent updated"
-    switchLightModeConfig() + relayModeConfig()
+    switchLightModeConfig() + relayModeConfig() + refresh()
 }
 
 private getCLUSTER_TUYA() { 0xEF00 }
-private getSETDATA() { 0x00 }
+// private getSETDATA() { 0x00 }
 
 // Parse incoming device messages to generate events
 def parse(String description) {
@@ -78,24 +92,22 @@ def parse(String description) {
 		Map descMap = zigbee.parseDescriptionAsMap(description)        
 		if (descMap?.clusterInt==CLUSTER_TUYA) {
         	if (debugLogging) log.debug descMap
-			if ( descMap?.command == "01" || descMap?.command == "00" ) {
+			if ( descMap?.command == "01" || descMap?.command == "02" ) {
 				def switchFunc = (descMap?.data[2])
                 def switchAttr = (descMap?.data[3])   
                 def switchState = (descMap?.data[6]) == "01" ? "on" : "off"
-                if (debugLogging) log.debug "Function =  ${switchFunc}  ///  Attribute =  ${switchAttr}  ///  State =  ${switchState}"
-                if (switchFunc <= "04" && switchAttr =="01") {
-                   def cd = getChildDevice("${device.id}-${switchFunc}")
+                if (switchFunc <= "03" && switchAttr =="01") {
+   	            def cd = getChildDevice("${device.id}-${switchFunc}")
 						if (cd == null) {
-						log.warn "Child device ${device.id}-${manufacturer} not found. Initialise parent device first"
-						return
+						return createEvent(name: "switch", value: switchState)
 						}
-			if (descMap?.command == "00") {
+            if (descMap?.command == "00") {
 			// switch toggled
 			cd.parse([[name: "switch", value:switchState, descriptionText: "Child switch ${switchFunc} turned $switchState"]])
 			} 
 			else if (descMap?.command == "01") {
             // report switch status
-            cd.parse([[name: "switch", value:switchState, descriptionText: "Child switch  ${switchFunc} is $switchState"]])
+            cd.parse([[name: "switch", value:switchState, descriptionText: "Child switch ${switchFunc} is $switchState"]])
 			}
             if (switchState == "on") {
 			if (debugLogging) log.debug "Parent Switch ON"
@@ -127,7 +139,7 @@ def lastCheckin() {    // send event for heartbeat
 
 def off() {
     if (infoLogging) log.info "Turn all switches OFF"	
-     return  [
+    return  [
     "he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {0001010100010002010001000301000100}","delay 200",
     //"he rattr 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x01 {}","delay 200"
          ]
@@ -142,10 +154,11 @@ def on() {
 }
 
 def refresh() {
-    if (debugLogging) log.debug "Refreshing..."
+    if (infoLogging) log.info "Refreshing..."
     return  [
-    "he rattr 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x01 {}","delay 200",  //light state
-     //"he rattr 0x${device.deviceNetworkId} 0x${device.endpointId} 0x0005 0x00 {}","delay 200",  //
+    //"he rattr  0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x04 {}","delay 200",  //light state
+    //"he rattr 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x01 {}","delay 200",  //light state
+    //"he rattr 0x${device.deviceNetworkId} 0x${device.endpointId} 0x0005 0x00 {}","delay 200",  //
     lastCheckin()
     ]   
 }
@@ -155,16 +168,16 @@ private String getChildId(childDevice) {
 }
 
 def componentOn(childDevice) {
-    if (debugLogging) log.debug "component is ON - ${childDevice} {${childDevice.deviceNetworkId}}"
-    if (infoLogging) log.info "${childDevice} {${childDevice.deviceNetworkId}} state is ON"
+    if (debugLogging) log.debug "component state is ON - ${childDevice} {${childDevice.deviceNetworkId}}"
+    if (infoLogging) log.info "${childDevice} is ON"
     String fullDataOn = "0001" + getChildId(childDevice) + "01000101"
     sendHubCommand(new HubAction("he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${fullDataOn}}", Protocol.ZIGBEE))
     if (debugLogging) log.debug "{executed} 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${fullDataOn}}"
 }
 
 def componentOff(childDevice) {
-    if (debugLogging) log.debug "component is OFF - ${childDevice} {${childDevice.deviceNetworkId}}"
-    if (infoLogging) log.info "${childDevice} {${childDevice.deviceNetworkId}} state is OFF"
+    if (debugLogging) log.debug "component state is OFF - ${childDevice} {${childDevice.deviceNetworkId}}"
+    if (infoLogging) log.info "${childDevice} is OFF"
     String fullDataOff = "0001" + getChildId(childDevice) + "01000100"
     sendHubCommand(new HubAction("he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${fullDataOff}}", Protocol.ZIGBEE))
     if (debugLogging) log.debug "{executed} 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${fullDataOff}}"
@@ -187,7 +200,7 @@ def setupChildDevices() {
         case '_TZE200_g1ib5ldv':
             buttons = 2
         break
-		case '_TZE200_tz32mtza':
+	case '_TZE200_tz32mtza':
             buttons = 3
         break
     }
@@ -197,11 +210,12 @@ def setupChildDevices() {
 
 def createChildDevices(int buttons) {
     if (debugLogging) log.debug "Parent createChildDevices"
-    
-    if (buttons <= 1)
+  
+    if (buttons <= 1){
 	if (debugLogging) log.debug "This device have only: $buttons button, Child devices not needed."
-        return 
-        
+        return         } 
+
+    else    
     for (i in 1..buttons) {
         def childId = "${device.id}-0${i}"
         def existingChild = getChildDevices()?.find { it.deviceNetworkId == childId}
@@ -209,7 +223,7 @@ def createChildDevices(int buttons) {
         if (existingChild) {
             if (infoLogging) log.info "Child device ${childId} already exists (${existingChild})"
         } 
-	    else {
+		else {
             if (infoLogging) log.info "Creating device ${childId}"
             addChildDevice("hubitat", "Generic Component Switch", childId, [isComponent: true, name: "Switch EP0${i}", label: "${device.displayName} EP0${i}"])
         }
