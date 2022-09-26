@@ -4,6 +4,8 @@ import hubitat.device.Protocol
 /*
  *  revision 1.01 - 2022-02-22 - added Moes 4-Gang Switch / ZTS-EU4 
  *  revision 1.02 - 2022-02-27 - added more Tuya fingerprints for 1,2,3 and 4 gangs TS0601 wall switches
+ *  revision 1.03 - 2022-09-26 - added Zemismart 6 Gangs Wall Light Switch
+*
 */
 
 metadata {
@@ -18,6 +20,7 @@ metadata {
 	    fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_g1ib5ldv", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"42", deviceJoinName: "Moes 2-Gang Switch / ZTS-EU2"
         fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_tz32mtza", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"42", deviceJoinName: "Moes 3-Gang Switch / ZTS-EU3"
         fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_k6jhsr0q", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"42", deviceJoinName: "Moes 4-Gang Switch / ZTS-EU4"
+        fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_9mahtqtg", endpointId:"01", inClusters:"0004,0005,EF00,0000", outClusters:"0019,000A", application:"42", deviceJoinName: "Zemismart 6 Gangs Wall Light Switch"
     }
         attribute "switchLightMode","enum",["OFF", "ON", "Position"]
         attribute "relayMode","enum",["OFF", "ON", "Last state"]
@@ -102,7 +105,7 @@ def parse(String description) {
 				def switchFunc = (descMap?.data[2])
                 def switchAttr = (descMap?.data[3])   
                 def switchState = (descMap?.data[6]) == "01" ? "on" : "off"
-                if (switchFunc in ["01", "02", "03", "04"] && switchAttr =="01") {
+                if (switchFunc in ["01", "02", "03", "04", "05", "06"] && switchAttr =="01") {
    	                def cd = getChildDevice("${device.id}-${switchFunc}")
 				    if (cd == null) {
 				        return createEvent(name: "switch", value: switchState)
@@ -218,6 +221,9 @@ def setupChildDevices() {
         case '_TZE200_aqnazj70' :
         case '_TZE200_1ozguk6x' :
             buttons = 4
+            break
+        case '_TZE200_9mahtqtg' :
+            buttons = 6
             break
         case '_TZE200_vhy3iakz' :
         case '_TZ3000_uim07oem' :
