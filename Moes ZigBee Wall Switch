@@ -5,6 +5,7 @@ import hubitat.device.Protocol
  *  revision 1.01 - 2022-02-22 - added Moes 4-Gang Switch / ZTS-EU4 
  *  revision 1.02 - 2022-02-27 - added more Tuya fingerprints for 1,2,3 and 4 gangs TS0601 wall switches
  *  revision 1.03 - 2022-09-26 - added Zemismart 6 Gangs Wall Light Switch
+ *  revision 1.04 - 2022-10-12 - _TZE200_tz32mtza bug fix; code cleanup
 *
 */
 
@@ -12,7 +13,6 @@ metadata {
     definition (name: "Moes ZigBee Wall Switch 1/2/3-Gang", namespace: "Moes 1.31", author: "Martin Kura") {
         capability "Initialize"
         capability "Actuator"
-//       capability "Configuration"
         capability "Refresh"
         capability "Switch"
         
@@ -51,27 +51,6 @@ void logsOff(){
     device.updateSetting("debugLogging",[value:"false",type:"bool"])
 }
 
-/*def configure(){
-     if (debugLogging) log.debug "Configuring Reporting and Bindings..."
-   
-    def cmds = [
-            //bindings
-            "zdo bind 0x${device.deviceNetworkId} 0x01 0x00 0xEF00 {${device.zigbeeId}} {}", "delay 200",
-            "zdo bind 0x${device.deviceNetworkId} 0x01 0x01 0xEF00 {${device.zigbeeId}} {}", "delay 200",
-            //"zdo bind 0x${device.deviceNetworkId} 0x${device.endpointId} 0x01 0x0004 {${device.zigbeeId}} {}", "delay 200",
-            //"zdo bind 0x${device.deviceNetworkId} 0x${device.endpointId} 0x01 0x0005 {${device.zigbeeId}} {}", "delay 200",
-            //reporting
-            "he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0 0x00 0 0xFFFF {}","delay 200",
-            "he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0 0x01 0 0xFFFF {}", "delay 200",
-            //"he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0x0300 0 0x0000 0 0xFFFF {}", "delay 200",
-           //"he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0x0300 0 0x0001 0 0xFFFF {}", "delay 200",
-           // "he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0x0300 0 0x0007 0 0xFFFF {}", "delay 200",
-           // "he cr 0x${device.deviceNetworkId} 0x${device.endpointId} 0x0300 0 0x0008 1 0xFFFE {}", "delay 200",
-    ] + refresh()
-    return cmds
-    
-}     */ 
-
 def installed() {
     log.info "Installing..."
     log.warn "Debug logging will be automatically disabled after 30 minutes!"
@@ -93,7 +72,6 @@ def updated() {
 }
 
 private getCLUSTER_TUYA() { 0xEF00 }
-// private getSETDATA() { 0x00 }
 
 // Parse incoming device messages to generate events
 def parse(String description) {
@@ -149,26 +127,21 @@ def lastCheckin() {    // send event for heartbeat
 def off() {
     if (infoLogging) log.info "Turn all switches OFF"	
     return  [
-    "he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {0001010100010002010001000301000100}","delay 200",
-    //"he rattr 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x01 {}","delay 200"
-         ]
+        "he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {0001010100010002010001000301000100}","delay 200",
+    ]
 }
 
 def on() {
     if (infoLogging) log.info "Turn all switches ON"
     return  [
-    "he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {0001010100010102010001010301000101}","delay 200",
-   // "he rattr 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x01 {}","delay 200"
-          ]
+        "he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {0001010100010102010001010301000101}","delay 200",
+    ]
 }
 
 def refresh() {
     if (infoLogging) log.info "Refreshing..."
     return  [
-    //"he rattr  0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x04 {}","delay 200",  //light state
-    //"he rattr 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x01 {}","delay 200",  //light state
-    //"he rattr 0x${device.deviceNetworkId} 0x${device.endpointId} 0x0005 0x00 {}","delay 200",  //
-    lastCheckin()
+        lastCheckin()
     ]   
 }
 
@@ -205,7 +178,6 @@ def setupChildDevices() {
     switch (device.data.manufacturer) {
         case '_TZE200_amp6tsvy' :
         case '_TZE200_oisqyl4o' :
-        case '_TZE200_tz32mtza' :
         case '_TZE200_wfxuhoea' :
             buttons = 1
             break
