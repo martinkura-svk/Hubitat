@@ -6,7 +6,7 @@ import hubitat.device.Protocol
  *  revision 1.02 - 2022-02-27 - added more Tuya fingerprints for 1,2,3 and 4 gangs TS0601 wall switches
  *  revision 1.03 - 2022-09-26 - added Zemismart 6 Gangs Wall Light Switch
  *  revision 1.04 - 2022-10-12 - _TZE200_tz32mtza bug fix; code cleanup
- *  revision 1.05 - 2023-03-16 - added IZ Smart 1-2-3-4 gang switches _TZE200_gbagoilo _TZE200_nh9m9emk _TZE200_go3tvswy _TZE200_mexisfik
+ *  revision 1.05 - 2023-03-16 - added OZ Smart 1-2-3-4 gang switches _TZE200_gbagoilo _TZE200_nh9m9emk _TZE200_go3tvswy _TZE200_mexisfik
 *
 */
 
