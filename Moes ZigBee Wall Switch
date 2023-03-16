@@ -6,6 +6,7 @@ import hubitat.device.Protocol
  *  revision 1.02 - 2022-02-27 - added more Tuya fingerprints for 1,2,3 and 4 gangs TS0601 wall switches
  *  revision 1.03 - 2022-09-26 - added Zemismart 6 Gangs Wall Light Switch
  *  revision 1.04 - 2022-10-12 - _TZE200_tz32mtza bug fix; code cleanup
+ *  revision 1.05 - 2023-03-16 - added IZ Smart 1-2-3-4 gang switches _TZE200_gbagoilo _TZE200_nh9m9emk _TZE200_go3tvswy _TZE200_mexisfik
 *
 */
 
@@ -21,6 +22,10 @@ metadata {
         fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_tz32mtza", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"42", deviceJoinName: "Moes 3-Gang Switch / ZTS-EU3"
         fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_k6jhsr0q", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"42", deviceJoinName: "Moes 4-Gang Switch / ZTS-EU4"
         fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_9mahtqtg", endpointId:"01", inClusters:"0004,0005,EF00,0000", outClusters:"0019,000A", application:"42", deviceJoinName: "Zemismart 6 Gangs Wall Light Switch"
+        fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_gbagoilo", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"46", deviceJoinName: "OZ Smart Single Light Switch"
+        fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_nh9m9emk", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"46", deviceJoinName: "OZ Smart Double Light Switch"
+        fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_go3tvswy", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"46", deviceJoinName: "OZ Smart Triple Light Switch"
+        fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_mexisfik", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"46", deviceJoinName: "OZ Smart Quad Light Switch"
     }
         attribute "switchLightMode","enum",["OFF", "ON", "Position"]
         attribute "relayMode","enum",["OFF", "ON", "Last state"]
@@ -179,19 +184,23 @@ def setupChildDevices() {
         case '_TZE200_amp6tsvy' :
         case '_TZE200_oisqyl4o' :
         case '_TZE200_wfxuhoea' :
+        case '_TZE200_gbagoilo' :
             buttons = 1
             break
         case '_TZE200_g1ib5ldv' :
         case '_TZE200_wunufsil' :
+        case '_TZE200_nh9m9emk' :
             buttons = 2
             break
 	    case '_TZE200_tz32mtza' :
         case '_TZE200_kyfqmmyl' :
+        case '_TZE200_go3tvswy' :
             buttons = 3
             break
 	    case '_TZE200_k6jhsr0q' :
         case '_TZE200_aqnazj70' :
         case '_TZE200_1ozguk6x' :
+        case '_TZE200_mexisfik' :
             buttons = 4
             break
         case '_TZE200_9mahtqtg' :
