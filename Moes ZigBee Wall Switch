@@ -8,7 +8,8 @@ import hubitat.device.Protocol
  *  revision 1.04 - 2022-10-12 - _TZE200_tz32mtza bug fix; code cleanup
  *  revision 1.05 - 2023-03-16 - added OZ Smart 1-2-3-4 gang switches _TZE200_gbagoilo _TZE200_nh9m9emk _TZE200_go3tvswy _TZE200_mexisfik
  *  revision 1.06 - 2023-04-24 - added importUrl; _TZE200_aqnazj70 _TZE200_wunufsil _TZE200_oisqyl4o _TZE200_atpwqgml
-*
+ *  revision 1.07 - 2023-07-18 - added _TZE200_7deq70b8 (@pabutterworth)
+ *
 */
 
 metadata {
@@ -31,6 +32,7 @@ metadata {
         fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_nh9m9emk", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"46", deviceJoinName: "OZ Smart Double Light Switch"
         fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_go3tvswy", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"46", deviceJoinName: "OZ Smart Triple Light Switch"
         fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_mexisfik", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"46", deviceJoinName: "OZ Smart Quad Light Switch"
+        fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_7deq70b8", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"42", deviceJoinName: "Moes 2-gang switch"
     }
         attribute "switchLightMode","enum",["OFF", "ON", "Position"]
         attribute "relayMode","enum",["OFF", "ON", "Last state"]
@@ -195,6 +197,7 @@ def setupChildDevices() {
         case '_TZE200_g1ib5ldv' :
         case '_TZE200_wunufsil' :
         case '_TZE200_nh9m9emk' :
+        case '_TZE200_7deq70b8' :
             buttons = 2
             break
 	    case '_TZE200_tz32mtza' :
