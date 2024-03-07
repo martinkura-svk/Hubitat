@@ -1,9 +1,10 @@
+/* groovylint-disable BuilderMethodWithSideEffects, CompileStatic, DuplicateListLiteral, DuplicateMapLiteral, DuplicateNumberLiteral, DuplicateStringLiteral, FactoryMethodName, ImplicitClosureParameter, ImplicitReturnStatement, LineLength, MethodParameterTypeRequired, MethodReturnTypeRequired, NestedBlockDepth, NoDef, NoJavaUtilDate, PublicMethodsBeforeNonPublicMethods, UnnecessaryGetter, VariableTypeRequired */
 import hubitat.device.HubAction
 import hubitat.device.Protocol
 
 /*
  *  revision 1.0.0 - 2021-05-25 - martinkura - latest original driver version update
- *  revision 1.0.1 - 2022-02-22 - kkossev - added Moes 4-Gang Switch / ZTS-EU4 
+ *  revision 1.0.1 - 2022-02-22 - kkossev - added Moes 4-Gang Switch / ZTS-EU4
  *  revision 1.0.2 - 2022-02-27 - kkossev - added more Tuya fingerprints for 1,2,3 and 4 gangs TS0601 wall switches
  *  revision 1.0.3 - 2022-09-26 - kkossev - added Zemismart 6 Gangs Wall Light Switch
  *  revision 1.0.4 - 2022-10-12 - kkossev - _TZE200_tz32mtza bug fix; code cleanup
@@ -12,82 +13,86 @@ import hubitat.device.Protocol
  *  revision 1.0.7 - 2023-07-18 - kkossev - added _TZE200_7deq70b8 (@pabutterworth)
  *  revision 1.0.8 - 2023-11-20 - kkossev - added TS0601 _TZE204_dqolcpcp (@alex1) (only the first 6 relays should be working)
  *  revision 1.0.9 - 2024-01-02 - kkossev - added TS0601 _TZE200_r731zlxk
+ *  revision 1.1.0 - 2024-03-07 - kkossev - Groovy linting; addeed Zemismart 4-gang switch _TZE200_1n2kyphz; _TZE200_shkxsgis; _TZE204_shkxsgis
  *
 */
 
-static String version() { "1.0.9" }
-static String timeStamp() {"2024/01/02 9:52 AM"}
+static String version() { '1.1.0' }
+static String timeStamp() { '2024/03/07 9:44 PM' }
 
 metadata {
-    definition (name: "Moes ZigBee Wall Switch 1/2/3-Gang", namespace: "Moes 1.31", author: "Martin Kura", importUrl: "https://raw.githubusercontent.com/martinkura-svk/Hubitat/main/Moes%20ZigBee%20Wall%20Switch") {
-        capability "Initialize"
-        capability "Actuator"
-        capability "Refresh"
-        capability "Switch"
-        
-        fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_amp6tsvy", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"42", deviceJoinName: "Moes 1-Gang Switch / ZTS-EU1"
-        fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_oisqyl4o", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"42", deviceJoinName: "No Neutral Push Button Light Switch 1 Gang"
-        fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_g1ib5ldv", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"42", deviceJoinName: "Moes 2-Gang Switch / ZTS-EU2"
-        fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_wunufsil", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"42", deviceJoinName: "No Neutral Push Button Light Switch 2 Gang"
-        fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_tz32mtza", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"42", deviceJoinName: "Moes 3-Gang Switch / ZTS-EU3"
-        fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_atpwqgml", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"42", deviceJoinName: "No Neutral Push Button Light Switch 3 Gang"
-        fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_k6jhsr0q", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"42", deviceJoinName: "Moes 4-Gang Switch / ZTS-EU4"
-        fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_aqnazj70", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"42", deviceJoinName: "Touch Switch 4 Gang No Neutral"
-        fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_9mahtqtg", endpointId:"01", inClusters:"0004,0005,EF00,0000", outClusters:"0019,000A", application:"42", deviceJoinName: "Zemismart 6 Gangs Wall Light Switch"
-        fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_r731zlxk", endpointId:"01", inClusters:"0004,0005,EF00,0000", outClusters:"0019,000A", application:"42", deviceJoinName: "Zemismart 6 Gangs Wall Light Switch"
-        fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_gbagoilo", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"46", deviceJoinName: "OZ Smart Single Light Switch"
-        fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_nh9m9emk", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"46", deviceJoinName: "OZ Smart Double Light Switch"
-        fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_go3tvswy", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"46", deviceJoinName: "OZ Smart Triple Light Switch"
-        fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_mexisfik", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"46", deviceJoinName: "OZ Smart Quad Light Switch"
-        fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE200_7deq70b8", endpointId:"01", inClusters:"0000,0004,0005,EF00", outClusters:"0019,000A", application:"42", deviceJoinName: "Moes 2-gang switch"
-        fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE204_dqolcpcp", endpointId:"01", inClusters:"0004,0005,EF00,0000", outClusters:"0019,000A", application:"42", deviceJoinName: "Tuya 12-way Relay Moduleh"
+    definition(name: 'Moes ZigBee Wall Switch 1/2/3-Gang', namespace: 'Moes 1.31', author: 'Martin Kura', importUrl: 'https://raw.githubusercontent.com/martinkura-svk/Hubitat/main/Moes%20ZigBee%20Wall%20Switch') {
+        capability 'Initialize'
+        capability 'Actuator'
+        capability 'Refresh'
+        capability 'Switch'
+
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_amp6tsvy', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'42', deviceJoinName: 'Moes 1-Gang Switch / ZTS-EU1'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_oisqyl4o', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'42', deviceJoinName: 'No Neutral Push Button Light Switch 1 Gang'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_g1ib5ldv', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'42', deviceJoinName: 'Moes 2-Gang Switch / ZTS-EU2'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_wunufsil', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'42', deviceJoinName: 'No Neutral Push Button Light Switch 2 Gang'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_tz32mtza', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'42', deviceJoinName: 'Moes 3-Gang Switch / ZTS-EU3'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_atpwqgml', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'42', deviceJoinName: 'No Neutral Push Button Light Switch 3 Gang'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_k6jhsr0q', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'42', deviceJoinName: 'Moes 4-Gang Switch / ZTS-EU4'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_aqnazj70', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'42', deviceJoinName: 'Touch Switch 4 Gang No Neutral'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_9mahtqtg', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 6 Gangs Wall Light Switch'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_r731zlxk', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 6 Gangs Wall Light Switch'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_gbagoilo', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'46', deviceJoinName: 'OZ Smart Single Light Switch'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_nh9m9emk', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'46', deviceJoinName: 'OZ Smart Double Light Switch'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_go3tvswy', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'46', deviceJoinName: 'OZ Smart Triple Light Switch'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_mexisfik', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'46', deviceJoinName: 'OZ Smart Quad Light Switch'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_7deq70b8', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'42', deviceJoinName: 'Moes 2-gang switch'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_dqolcpcp', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Tuya 12-way Relay Moduleh'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_1n2kyphz', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 4-gang switch'              // https://www.aliexpress.com/item/1005003972289459.html
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_shkxsgis', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 4-gang switch'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_shkxsgis', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 4-gang switch'
     }
-    attribute "switchLightMode","enum",["OFF", "ON", "Position"]
-    attribute "relayMode","enum",["OFF", "ON", "Last state"]
-    attribute "lastCheckin", "string"
+    attribute 'switchLightMode', 'enum', ['OFF', 'ON', 'Position']
+    attribute 'relayMode', 'enum', ['OFF', 'ON', 'Last state']
+    attribute 'lastCheckin', 'string'
 
     preferences {
-        input(name: "switchLightMode", type: "enum", title: ("Switch Backlight Mode"), description: ("- select type of backlight indicator (default: Position)"), options: ["OFF", "ON", "Position"], defaultValue: "Position", submitOnChange: true)
-        input(name: "relayMode", type: "enum", title: ("Switch Relay Mode"), description: ("- select relay renew state after AC failed (default: OFF)"), options: ["OFF", "ON", "Last state"], defaultValue: "OFF", submitOnChange: true)
-        input(name: "debugLogging", type: "bool", title: ("Enable debug logging"), description: "", defaultValue: true, submitOnChange: true, displayDuringSetup: true)
-        input(name: "infoLogging", type: "bool", title: ("Enable info logging"), description: "", defaultValue: true, submitOnChange: true, displayDuringSetup: true)
+        input(name: 'switchLightMode', type: 'enum', title: ("Switch Backlight Mode"), description: ("- select type of backlight indicator (default: Position)"), options: ['OFF', 'ON', 'Position'], defaultValue: 'Position', submitOnChange: true)
+        input(name: 'relayMode', type: 'enum', title: ("Switch Relay Mode"), description: ("- select relay renew state after AC failed (default: OFF)"), options: ['OFF', 'ON', 'Last state'], defaultValue: 'OFF', submitOnChange: true)
+        input(name: 'debugLogging', type: 'bool', title: ("Enable debug logging"), description: '', defaultValue: true, submitOnChange: true, displayDuringSetup: true)
+        input(name: 'infoLogging', type: 'bool', title: ("Enable info logging"), description: '', defaultValue: true, submitOnChange: true, displayDuringSetup: true)
     }
 }
 
 def initialize() {
-    if (infoLogging) log.info "Initializing..."
-    log.warn "Debug logging will be automatically disabled after 30 minutes!"
+    if (infoLogging) { log.info 'Initializing...' }
+    log.warn 'Debug logging will be automatically disabled after 30 minutes!'
     setupChildDevices()
-    device.updateSetting("switchLightMode", [type:"enum", value:"Position"])
-    device.updateSetting("relayMode", [type:"enum", value:"OFF"])
-    device.updateSetting("debugLogging", [type:"bool", value:"true"])
-    device.updateSetting("infoLogging", [type:"bool", value:"true"])
-    if (debugLogging) runIn(1800, logsOff)
+    device.updateSetting('switchLightMode', [type:'enum', value:'Position'])
+    device.updateSetting('relayMode', [type:'enum', value:'OFF'])
+    device.updateSetting('debugLogging', [type:'bool', value:'true'])
+    device.updateSetting('infoLogging', [type:'bool', value:'true'])
+    if (debugLogging) { runIn(1800, logsOff) }
     refresh()
 }
 
-void logsOff(){
-    log.warn "Debug logging disabled..."
-    device.updateSetting("debugLogging", [value:"false" ,type:"bool"])
+void logsOff() {
+    log.warn 'Debug logging disabled...'
+    device.updateSetting('debugLogging', [value:'false' ,type:'bool'])
 }
 
 def installed() {
-    log.info "Installing..."
-    log.warn "Debug logging will be automatically disabled after 30 minutes!"
+    log.info 'Installing...'
+    log.warn 'Debug logging will be automatically disabled after 30 minutes!'
     setupChildDevices()
-    device.updateSetting("switchLightMode", [type:"enum", value:"Position"])
-    device.updateSetting("relayMode", [type:"enum", value:"OFF"])
-    device.updateSetting("debugLogging", [type:"bool", value:"true"])
-    device.updateSetting("infoLogging", [type:"bool", value:"true"])
-    if (debugLogging) runIn(1800, logsOff)
+    device.updateSetting('switchLightMode', [type:'enum', value:'Position'])
+    device.updateSetting('relayMode', [type:'enum', value:'OFF'])
+    device.updateSetting('debugLogging', [type:'bool', value:'true'])
+    device.updateSetting('infoLogging', [type:'bool', value:'true'])
+    if (debugLogging) { runIn(1800, logsOff) }
     refresh()
 }
 
 def updated() {
     log.warn "debug logging is: ${debugLogging == true}"
     log.warn "description logging is: ${infoLogging == true}"
-    if (infoLogging) log.info "Updated..."
-    if (debugLogging) log.debug "Parent updated"
+    if (infoLogging) { log.info 'Updated...' }
+    if (debugLogging) { log.debug 'Parent updated' }
     switchLightModeConfig() + relayModeConfig() + refresh()
 }
 
@@ -96,105 +101,105 @@ private getCLUSTER_TUYA() { 0xEF00 }
 // Parse incoming device messages to generate events
 def parse(String description) {
     if (description?.startsWith('catchall:') || description?.startsWith('read attr -')) {
-        Map descMap = zigbee.parseDescriptionAsMap(description)        
-        if (descMap?.clusterInt==CLUSTER_TUYA) {
-            if (debugLogging) log.debug descMap
-            if ( descMap?.command in ["00", "01", "02"] ) {
+        Map descMap = zigbee.parseDescriptionAsMap(description)
+        if (descMap?.clusterInt == CLUSTER_TUYA) {
+            if (debugLogging) { log.debug descMap }
+            if ( descMap?.command in ['00', '01', '02'] ) {
                 def switchFunc = (descMap?.data[2])
-                def switchAttr = (descMap?.data[3])   
-                def switchState = (descMap?.data[6]) == "01" ? "on" : "off"
-                if (switchFunc in ["01", "02", "03", "04", "05", "06"] && switchAttr == "01") {
-                       def cd = getChildDevice("${device.id}-${switchFunc}")
+                def switchAttr = (descMap?.data[3])
+                def switchState = (descMap?.data[6]) == '01' ? 'on' : 'off'
+                if (switchFunc in ['01', '02', '03', '04', '05', '06'] && switchAttr == '01') {
+                    def cd = getChildDevice("${device.id}-${switchFunc}")
                     if (cd == null) {
-                        return createEvent(name: "switch", value: switchState)
+                        return createEvent(name: 'switch', value: switchState)
                     }
-                    if (descMap?.command == "00") {
+                    if (descMap?.command == '00') {
                         // switch toggled
-                        cd.parse([[name: "switch", value:switchState, descriptionText: "Child switch ${switchFunc} turned $switchState"]])
-                    } 
-                    else if (descMap?.command in ["01", "02"]) {
-                        // report switch status
-                        cd.parse([[name: "switch", value:switchState, descriptionText: "Child switch ${switchFunc} is $switchState"]])
+                        cd.parse([[name: 'switch', value:switchState, descriptionText: "Child switch ${switchFunc} turned $switchState"]])
                     }
-                    if (switchState == "on") {
-                        if (debugLogging) log.debug "Parent Switch ON"
-                        return createEvent(name: "switch", value: "on")
-                    } 
-                    else if (switchState == "off") {
+                    else if (descMap?.command in ['01', '02']) {
+                        // report switch status
+                        cd.parse([[name: 'switch', value:switchState, descriptionText: "Child switch ${switchFunc} is $switchState"]])
+                    }
+                    if (switchState == 'on') {
+                        if (debugLogging) { log.debug 'Parent Switch ON' }
+                        return createEvent(name: 'switch', value: 'on')
+                    }
+                    else if (switchState == 'off') {
                         def cdsOn = 0
                         // cound number of switches on
                         getChildDevices().each { child ->
-                            if (getChildId(child) != switchFunc && child.currentValue('switch') == "on") {
+                            if (getChildId(child) != switchFunc && child.currentValue('switch') == 'on') {
                                 cdsOn++
                             }
                         }
                         if (cdsOn == 0) {
-                            if (debugLogging) log.debug "Parent Switch OFF"
-                            return createEvent(name: "switch", value: "off")
-                        }    
+                            if (debugLogging) { log.debug 'Parent Switch OFF' }
+                            return createEvent(name: 'switch', value: 'off')
+                        }
                     }
                 }
             }
         }
     }
-}   
+}
 
-def lastCheckin() {    // send event for heartbeat 
+def lastCheckin() {    // send event for heartbeat
     def now = new Date()
-    sendEvent(name: "lastCheckin", value: now)
+    sendEvent(name: 'lastCheckin', value: now)
 }
 
 def off() {
-    if (infoLogging) log.info "Turn all switches OFF"    
+    if (infoLogging) { log.info 'Turn all switches OFF' }
     return  [
-        "he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {0001010100010002010001000301000100}","delay 200",
+        "he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {0001010100010002010001000301000100}", 'delay 200',
     ]
 }
 
 def on() {
-    if (infoLogging) log.info "Turn all switches ON"
+    if (infoLogging) { log.info 'Turn all switches ON' }
     return  [
-        "he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {0001010100010102010001010301000101}","delay 200",
+        "he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {0001010100010102010001010301000101}", 'delay 200',
     ]
 }
 
 def refresh() {
-    if (infoLogging) log.info "Refreshing..."
+    if (infoLogging) { log.info 'Refreshing...' }
     return  [
         lastCheckin()
-    ]   
+    ]
 }
 
 private String getChildId(childDevice) {
     return childDevice.deviceNetworkId.substring(childDevice.deviceNetworkId.length() - 2)
 }
 
-def componentOn(childDevice) {
-    if (debugLogging) log.debug "component state is ON - ${childDevice} {${childDevice.deviceNetworkId}}"
-    if (infoLogging) log.info "${childDevice} is ON"
-    String fullDataOn = "0001" + getChildId(childDevice) + "01000101"
+void componentOn(childDevice) {
+    if (debugLogging) { log.debug "component state is ON - ${childDevice} {${childDevice.deviceNetworkId}}" }
+    if (infoLogging) { log.info "${childDevice} is ON" }
+    String fullDataOn = '0001' + getChildId(childDevice) + '01000101'
     sendHubCommand(new HubAction("he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${fullDataOn}}", Protocol.ZIGBEE))
-    if (debugLogging) log.debug "{executed} 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${fullDataOn}}"
+    if (debugLogging) { log.debug { "{executed} 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${fullDataOn}}" } }
 }
 
-def componentOff(childDevice) {
-    if (debugLogging) log.debug "component state is OFF - ${childDevice} {${childDevice.deviceNetworkId}}"
-    if (infoLogging) log.info "${childDevice} is OFF"
-    String fullDataOff = "0001" + getChildId(childDevice) + "01000100"
+void componentOff(childDevice) {
+    if (debugLogging) { log.debug "component state is OFF - ${childDevice} {${childDevice.deviceNetworkId}}" }
+    if (infoLogging) { log.info "${childDevice} is OFF" }
+    String fullDataOff = '0001' + getChildId(childDevice) + '01000100'
     sendHubCommand(new HubAction("he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${fullDataOff}}", Protocol.ZIGBEE))
-    if (debugLogging) log.debug "{executed} 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${fullDataOff}}"
+    if (debugLogging) { log.debug "{executed} 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${fullDataOff}}" }
 }
 
-def componentRefresh(childDevice) {
-    if (debugLogging) log.debug "component refresh ${childDevice.deviceNetworkId} ${childDevice}"    
+void componentRefresh(childDevice) {
+    if (debugLogging) { log.debug "component refresh ${childDevice.deviceNetworkId} ${childDevice}" }
     sendHubCommand(new HubAction("he rattr 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00", Protocol.ZIGBEE))
-    if (debugLogging) log.debug "{executed} 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00"
+    if (debugLogging) { log.debug "{executed} 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00" }
 }
 
-def setupChildDevices() {
-    if (debugLogging) log.debug "Parent setupChildDevices"
-    deleteObsoleteChildren() 
-    def buttons = 0
+void setupChildDevices() {
+    if (debugLogging) { log.debug 'Parent setupChildDevices' }
+    deleteObsoleteChildren()
+    int buttons = 0
     switch (device.data.manufacturer) {
         case '_TZE200_amp6tsvy' :
         case '_TZE200_oisqyl4o' :
@@ -218,6 +223,9 @@ def setupChildDevices() {
         case '_TZE200_aqnazj70' :
         case '_TZE200_1ozguk6x' :
         case '_TZE200_mexisfik' :
+        case '_TZE200_1n2kyphz' :
+        case '_TZE200_shkxsgis' :
+        case '_TZE204_shkxsgis' :
             buttons = 4
             break
         case '_TZE200_9mahtqtg' :
@@ -233,76 +241,77 @@ def setupChildDevices() {
             buttons = 4
             break
     }
-    if (infoLogging) log.info  "model: ${device.data.manufacturer}   buttons: $buttons"
+    if (infoLogging) { log.info  "model: ${device.data.manufacturer}   buttons: $buttons" }
     createChildDevices((int)buttons)
 }
 
-def createChildDevices(int buttons) {
-    if (debugLogging) log.debug "Parent createChildDevices"
-  
+void createChildDevices(int buttons) {
+    if (debugLogging) { log.debug 'Parent createChildDevices' }
+
     if (buttons <= 1) {
-        if (debugLogging) log.debug "This device have only: $buttons button, Child devices not needed."
-        return 
-    } 
+        if (debugLogging) { log.debug "This device have only: $buttons button, Child devices not needed." }
+        return
+    }
+    /* groovylint-disable-next-line UnnecessaryElseStatement */
     else {
         for (i in 1..buttons) {
             def childId = "${device.id}-0${i}"
-            def existingChild = getChildDevices()?.find { it.deviceNetworkId == childId}
-        
+            def existingChild = getChildDevices()?.find { it.deviceNetworkId == childId }
+
             if (existingChild) {
-                if (infoLogging) log.info "Child device ${childId} already exists (${existingChild})"
-            } 
+                if (infoLogging) { log.info "Child device ${childId} already exists (${existingChild})" }
+            }
             else {
-                if (infoLogging) log.info "Creating device ${childId}"
-                addChildDevice("hubitat", "Generic Component Switch", childId, [isComponent: true, name: "Switch EP0${i}", label: "${device.displayName} EP0${i}"])
+                if (infoLogging) { log.info "Creating device ${childId}" }
+                addChildDevice('hubitat', 'Generic Component Switch', childId, [isComponent: true, name: "Switch EP0${i}", label: "${device.displayName} EP0${i}"])
             }
         }
     }
 }
 
-def deleteObsoleteChildren() {
-    if (debugLogging) log.debug "Parent deleteChildren"
-    
-    getChildDevices().each {child->
+void deleteObsoleteChildren() {
+    if (debugLogging) { log.debug 'Parent deleteChildren' }
+
+    getChildDevices().each { child ->
         if (!child.deviceNetworkId.startsWith(device.id) || child.deviceNetworkId == "${device.id}-00") {
-            if (infoLogging) log.info "Deleting ${child.deviceNetworkId}"
-              deleteChildDevice(child.deviceNetworkId)
+            if (infoLogging) { log.info "Deleting ${child.deviceNetworkId}" }
+            deleteChildDevice(child.deviceNetworkId)
         }
     }
 }
 
-def switchLightModeConfig(){
-def cmds = []
-    switch(switchLightMode) {
-        case "OFF":
-            if (infoLogging) log.info "Backlight - OFF"
-            zigbee.command(0xEF00, 0x0, "00010f04000100")
+def switchLightModeConfig() {
+//def cmds = []
+    switch (switchLightMode) {
+        case 'OFF':
+            if (infoLogging) { log.info 'Backlight - OFF' }
+            zigbee.command(0xEF00, 0x0, '00010f04000100')
             break
-        case "ON":
-            if (infoLogging) log.info "Backlight - ON"
-            zigbee.command(0xEF00, 0x0, "00010f04000101")
+        case 'ON':
+            if (infoLogging) { log.info 'Backlight - ON' }
+            zigbee.command(0xEF00, 0x0, '00010f04000101')
             break
-        case "Position":
-            if (infoLogging) log.info "Backlight - position"
-            zigbee.command(0xEF00, 0x0, "00010f04000102")
+        case 'Position':
+            if (infoLogging) { log.info 'Backlight - position' }
+            zigbee.command(0xEF00, 0x0, '00010f04000102')
             break
     }
-} 
+}
 
-def relayModeConfig(){
-def cmds = []
-    switch(relayMode) {
-        case "OFF":
-            if (infoLogging) log.info "Relay state - OFF"
-             zigbee.command(0xEF00, 0x0, "00010e04000100")
+def relayModeConfig() {
+//def cmds = []
+    switch (relayMode) {
+        case 'OFF':
+            if (infoLogging) { log.info 'Relay state - OFF' }
+            zigbee.command(0xEF00, 0x0, '00010e04000100')
             break
-        case "ON":
-            if (infoLogging) log.info "Relay state - ON"
-             zigbee.command(0xEF00, 0x0, "00010e04000101")
+        case 'ON':
+            if (infoLogging) { log.info 'Relay state - ON' }
+            zigbee.command(0xEF00, 0x0, '00010e04000101')
             break
-        case "Last state":
-            if (infoLogging) log.info "Relay state - last state"
-             zigbee.command(0xEF00, 0x0, "00010e04000102")
+        case 'Last state':
+            if (infoLogging) { log.info 'Relay state - last state' }
+            zigbee.command(0xEF00, 0x0, '00010e04000102')
             break
     }
 }
