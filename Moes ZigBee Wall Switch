@@ -1,7 +1,4 @@
 /* groovylint-disable BuilderMethodWithSideEffects, CompileStatic, DuplicateListLiteral, DuplicateMapLiteral, DuplicateNumberLiteral, DuplicateStringLiteral, FactoryMethodName, ImplicitClosureParameter, ImplicitReturnStatement, LineLength, MethodParameterTypeRequired, MethodReturnTypeRequired, NestedBlockDepth, NoDef, NoJavaUtilDate, PublicMethodsBeforeNonPublicMethods, UnnecessaryGetter, VariableTypeRequired */
-import hubitat.device.HubAction
-import hubitat.device.Protocol
-
 /*
  *  revision 1.0.0 - 2021-05-25 - martinkura - latest original driver version update
  *  revision 1.0.1 - 2022-02-22 - kkossev - added Moes 4-Gang Switch / ZTS-EU4
@@ -13,12 +10,18 @@ import hubitat.device.Protocol
  *  revision 1.0.7 - 2023-07-18 - kkossev - added _TZE200_7deq70b8 (@pabutterworth)
  *  revision 1.0.8 - 2023-11-20 - kkossev - added TS0601 _TZE204_dqolcpcp (@alex1) (only the first 6 relays should be working)
  *  revision 1.0.9 - 2024-01-02 - kkossev - added TS0601 _TZE200_r731zlxk
- *  revision 1.1.0 - 2024-03-08 - kkossev - Groovy linting; addeed Zemismart 4-gang switch _TZE200_1n2kyphz; _TZE200_shkxsgis; _TZE204_shkxsgis
+ *  revision 1.1.0 - 2024-03-08 - kkossev - Groovy linting; addeed Zemismart 4-gang switch _TZE200_1n2kyphz; _TZE200_shkxsgis; _TZE204_shkxsgis; added testParse; Tuya cluster 0xEF00 data size check;
  *
 */
 
 static String version() { '1.1.0' }
-static String timeStamp() { '2024/03/08 7:38 AM' }
+static String timeStamp() { '2024/03/08 10:04 AM' }
+
+import hubitat.device.HubAction
+import hubitat.device.Protocol
+import groovy.transform.Field
+
+@Field static final Boolean _DEBUG = false
 
 metadata {
     definition(name: 'Moes ZigBee Wall Switch 1/2/3-Gang', namespace: 'Moes 1.31', author: 'Martin Kura', importUrl: 'https://raw.githubusercontent.com/martinkura-svk/Hubitat/main/Moes%20ZigBee%20Wall%20Switch') {
@@ -50,6 +53,10 @@ metadata {
     attribute 'switchLightMode', 'enum', ['OFF', 'ON', 'Position']
     attribute 'relayMode', 'enum', ['OFF', 'ON', 'Last state']
     attribute 'lastCheckin', 'string'
+
+    if (_DEBUG == true) {
+        command 'testParse', [[name:'val', type: 'STRING', description: 'description', constraints: ['STRING']]]
+    }
 
     preferences {
         input(name: 'switchLightMode', type: 'enum', title: ("Switch Backlight Mode"), description: ("- select type of backlight indicator (default: Position)"), options: ['OFF', 'ON', 'Position'], defaultValue: 'Position', submitOnChange: true)
@@ -100,11 +107,12 @@ private getCLUSTER_TUYA() { 0xEF00 }
 
 // Parse incoming device messages to generate events
 def parse(String description) {
+    if (debugLogging) { log.debug "description: ${description}" }
     if (description?.startsWith('catchall:') || description?.startsWith('read attr -')) {
         Map descMap = zigbee.parseDescriptionAsMap(description)
         if (descMap?.clusterInt == CLUSTER_TUYA) {
-            if (debugLogging) { log.debug descMap }
-            if ( descMap?.command in ['00', '01', '02'] ) {
+            if (debugLogging) { log.debug "descMap: ${descMap}" }
+            if ((descMap?.command in ['00', '01', '02']) && descMap?.data?.size() >= 7) {
                 def switchFunc = (descMap?.data[2])
                 def switchAttr = (descMap?.data[3])
                 def switchState = (descMap?.data[6]) == '01' ? 'on' : 'off'
@@ -314,4 +322,10 @@ def relayModeConfig() {
             zigbee.command(0xEF00, 0x0, '00010e04000102')
             break
     }
+}
+
+void testParse(final String description) {
+    log.warn "testParse: ${description}"
+    parse(description)
+    log.trace '---end of testParse---'
 }
