@@ -13,12 +13,12 @@ import hubitat.device.Protocol
  *  revision 1.0.7 - 2023-07-18 - kkossev - added _TZE200_7deq70b8 (@pabutterworth)
  *  revision 1.0.8 - 2023-11-20 - kkossev - added TS0601 _TZE204_dqolcpcp (@alex1) (only the first 6 relays should be working)
  *  revision 1.0.9 - 2024-01-02 - kkossev - added TS0601 _TZE200_r731zlxk
- *  revision 1.1.0 - 2024-03-07 - kkossev - Groovy linting; addeed Zemismart 4-gang switch _TZE200_1n2kyphz; _TZE200_shkxsgis; _TZE204_shkxsgis
+ *  revision 1.1.0 - 2024-03-08 - kkossev - Groovy linting; addeed Zemismart 4-gang switch _TZE200_1n2kyphz; _TZE200_shkxsgis; _TZE204_shkxsgis
  *
 */
 
 static String version() { '1.1.0' }
-static String timeStamp() { '2024/03/07 9:44 PM' }
+static String timeStamp() { '2024/03/08 7:38 AM' }
 
 metadata {
     definition(name: 'Moes ZigBee Wall Switch 1/2/3-Gang', namespace: 'Moes 1.31', author: 'Martin Kura', importUrl: 'https://raw.githubusercontent.com/martinkura-svk/Hubitat/main/Moes%20ZigBee%20Wall%20Switch') {
@@ -43,9 +43,9 @@ metadata {
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_mexisfik', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'46', deviceJoinName: 'OZ Smart Quad Light Switch'
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_7deq70b8', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'42', deviceJoinName: 'Moes 2-gang switch'
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_dqolcpcp', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Tuya 12-way Relay Moduleh'
-        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_1n2kyphz', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 4-gang switch'              // https://www.aliexpress.com/item/1005003972289459.html
-        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_shkxsgis', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 4-gang switch'
-        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_shkxsgis', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 4-gang switch'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_1n2kyphz', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 4-gang switch'              // https://www.aliexpress.com/item/1005003972289459.html
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_shkxsgis', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 4-gang switch'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_shkxsgis', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 4-gang switch'
     }
     attribute 'switchLightMode', 'enum', ['OFF', 'ON', 'Position']
     attribute 'relayMode', 'enum', ['OFF', 'ON', 'Last state']
