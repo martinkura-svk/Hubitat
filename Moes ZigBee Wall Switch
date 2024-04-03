@@ -11,11 +11,12 @@
  *  revision 1.0.8 - 2023-11-20 - kkossev - added TS0601 _TZE204_dqolcpcp (@alex1) (only the first 6 relays should be working)
  *  revision 1.0.9 - 2024-01-02 - kkossev - added TS0601 _TZE200_r731zlxk
  *  revision 1.1.0 - 2024-03-08 - kkossev - Groovy linting; addeed Zemismart 4-gang switch _TZE200_1n2kyphz; _TZE200_shkxsgis; _TZE204_shkxsgis; added testParse; Tuya cluster 0xEF00 data size check;
+ *  revision 1.1.1 - 2024-04-03 - kkossev - added TS0601 _TZE200_mua6ucdj @Joao; 
  *
 */
 
-static String version() { '1.1.0' }
-static String timeStamp() { '2024/03/08 10:04 AM' }
+static String version() { '1.1.1' }
+static String timeStamp() { '2024/04/03 12:58 PM' }
 
 import hubitat.device.HubAction
 import hubitat.device.Protocol
@@ -49,6 +50,7 @@ metadata {
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_1n2kyphz', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 4-gang switch'              // https://www.aliexpress.com/item/1005003972289459.html
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_shkxsgis', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 4-gang switch'
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_shkxsgis', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 4-gang switch'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_mua6ucdj', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: '4-Gang Smart Panel'              // https://www.aliexpress.com/item/1005005575403973.html
     }
     attribute 'switchLightMode', 'enum', ['OFF', 'ON', 'Position']
     attribute 'relayMode', 'enum', ['OFF', 'ON', 'Last state']
@@ -234,6 +236,7 @@ void setupChildDevices() {
         case '_TZE200_1n2kyphz' :
         case '_TZE200_shkxsgis' :
         case '_TZE204_shkxsgis' :
+        case '_TZE200_mua6ucdj' :
             buttons = 4
             break
         case '_TZE200_9mahtqtg' :
