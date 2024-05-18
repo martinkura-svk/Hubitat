@@ -1,0 +1,18 @@
+{
+ "packageName":"Moes ZigBee Wall Switch 1/2/3-Gang",
+ "author":"Martin Kura, kkossev",
+ "version":"1.1.4",
+ "minimumHEVersion":"2.3.7.100",
+ "dateReleased":"2024-05-18",
+ "releaseNotes":"first version pushed to HPM",
+ "communityLink":"https://community.hubitat.com/t/custom-device-drivers-wiki/465/1",
+ "drivers": [
+  {
+     "id":"75d3302f-015d-4753-befb-d1f99f3766e6",
+     "name":"Moes ZigBee Wall Switch 1/2/3-Gang",
+     "namespace":"Moes 1.31",
+     "location":"https://raw.githubusercontent.com/martinkura-svk/Hubitat/main/Moes%20ZigBee%20Wall%20Switch",
+     "required":true
+  }
+  ]
+}
