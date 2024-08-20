@@ -17,18 +17,19 @@
  *  revision 1.1.4 - 2024-05-17 - hhorigian - added _TZE204_4cl0dzt4
  *  revision 1.1.5 - 2024-06-28 - kkossev - added TS0006 _TYZB01_ltundz9m _TZ3000_jyupj3fw
  *  revision 1.1.6 - 2024-07-22 - hhorigian - added _TZE204_rkbxtclc, _TZE204_zpvusbtv, _TZE204_rzdkn5rxc
- *  revision 1.1.7 - 2024-08-20 - kkossev - (dev. version) added _TZE204_dvosyycn (limited to 6 relays only)
+ *  revision 1.1.7 - 2024-08-20 - kkossev - added _TZE204_dvosyycn (limited to 6 relays only); 
+ *  revision 1.2.0 - 2024-08-20 - kkossev - added syncTuyaDateTime()
  *
 */
 
-static String version() { '1.1.7' }
-static String timeStamp() { '2024/08/20 7:38 AM' }
+static String version() { '1.2.0' }
+static String timeStamp() { '2024/08/20 8:29 PM' }
 
 import hubitat.device.HubAction
 import hubitat.device.Protocol
 import groovy.transform.Field
 
-@Field static final Boolean _DEBUG = false
+@Field static final Boolean _DEBUG = true
 
 metadata {
     definition(name: 'Moes ZigBee Wall Switch 1/2/3-Gang', namespace: 'Moes 1.31', author: 'Martin Kura', importUrl: 'https://raw.githubusercontent.com/martinkura-svk/Hubitat/main/Moes%20ZigBee%20Wall%20Switch') {
@@ -58,11 +59,11 @@ metadata {
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_shkxsgis', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 4-gang switch'
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_aagrxlbd', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Tuya 4-gang switch'                   // @Gabriel
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_xjknlqz8', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Tuya 6-gang switch'                   // @Vartan BR - TrTRON
-        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_4cl0dzt4', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 6 Gangs Wall Light Switch'  // @Vartan BR - QA       
-        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_rkbxtclc', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Keypad 3-gang switch'  // @Vartan BR - TR    
-        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_zpvusbtv', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 2-gang switch'  // @Vartan BR - QA       
-        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_rzdkn5rx', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 1-gang switch'  // @Vartan BR - QA       
-        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_dvosyycn', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Tuya ZXYH 8IN/8OUT board'  // https://community.hubitat.com/t/device-labels-changing-on-reboot/141754/5?u=kkossev
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_4cl0dzt4', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 6 Gangs Wall Light Switch'  // @Vartan BR - QA
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_rkbxtclc', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Keypad 3-gang switch'                 // @Vartan BR - TR
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_zpvusbtv', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 2-gang switch'              // @Vartan BR - QA
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_rzdkn5rx', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 1-gang switch'              // @Vartan BR - QA
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_dvosyycn', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Tuya ZXYH 8IN/8OUT board'             // https://community.hubitat.com/t/device-labels-changing-on-reboot/141754/5?u=kkossev
     }
     attribute 'switchLightMode', 'enum', ['OFF', 'ON', 'Position']
     attribute 'relayMode', 'enum', ['OFF', 'ON', 'Last state']
@@ -73,10 +74,10 @@ metadata {
     }
 
     preferences {
+        input(name: 'infoLogging', type: 'bool', title: ("Enable info logging"), description: '', defaultValue: true, submitOnChange: true, displayDuringSetup: true)
+        input(name: 'debugLogging', type: 'bool', title: ("Enable debug logging"), description: '', defaultValue: true, submitOnChange: true, displayDuringSetup: true)
         input(name: 'switchLightMode', type: 'enum', title: ("Switch Backlight Mode"), description: ("- select type of backlight indicator (default: Position)"), options: ['OFF', 'ON', 'Position'], defaultValue: 'Position', submitOnChange: true)
         input(name: 'relayMode', type: 'enum', title: ("Switch Relay Mode"), description: ("- select relay renew state after AC failed (default: OFF)"), options: ['OFF', 'ON', 'Last state'], defaultValue: 'OFF', submitOnChange: true)
-        input(name: 'debugLogging', type: 'bool', title: ("Enable debug logging"), description: '', defaultValue: true, submitOnChange: true, displayDuringSetup: true)
-        input(name: 'infoLogging', type: 'bool', title: ("Enable info logging"), description: '', defaultValue: true, submitOnChange: true, displayDuringSetup: true)
     }
 }
 
@@ -162,9 +163,43 @@ def parse(String description) {
                     }
                 }
             }
+            else if (descMap?.command == '24') {
+                syncTuyaDateTime()
+            }
         }
     }
 }
+
+private void syncTuyaDateTime() {
+    // The data format for time synchronization, including standard timestamps and local timestamps. Standard timestamp (4 bytes)    local timestamp (4 bytes) Time synchronization data format: The standard timestamp is the total number of seconds from 00:00:00 on January 01, 1970 GMT to the present.
+    // For example, local timestamp = standard timestamp + number of seconds between standard time and local time (including time zone and daylight saving time).  // Y2K = 946684800
+    long offset = 0
+    int offsetHours = 0
+    Calendar cal = Calendar.getInstance()    //it return same time as new Date()
+    int hour = cal.get(Calendar.HOUR_OF_DAY)
+    try {
+        offset = location.getTimeZone().getOffset(new Date().getTime())
+        offsetHours = (offset / 3600000) as int
+        if (debugLogging) { log.debug "${device.displayName} timezone offset of current location is ${offset} (${offsetHours} hours), current hour is ${hour} h" }
+    } catch (e) {
+        log.error "${device.displayName} cannot resolve current location. please set location in Hubitat location setting. Setting timezone offset to zero"
+    }
+    //
+    List<String> cmds = zigbee.command(0xEF00, 0x24, '0008' + zigbee.convertToHexString((int)(now() / 1000), 8) + zigbee.convertToHexString((int)((now() + offset) / 1000), 8))
+    //String cmds = '0008' + zigbee.convertToHexString((int)(now() / 1000), 8) + zigbee.convertToHexString((int)((now() + offset) / 1000), 8)
+    //sendHubCommand(new HubAction("he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${cmds}}", Protocol.ZIGBEE))
+    sendZigbeeCommands(cmds)
+     if (debugLogging) { log.debug "${device.displayName} Tuya device time synchronized" }
+}
+
+public void sendZigbeeCommands(List<String> cmd) {
+    hubitat.device.HubMultiAction allActions = new hubitat.device.HubMultiAction()
+    cmd.each {
+        allActions.add(new hubitat.device.HubAction(it, hubitat.device.Protocol.ZIGBEE))
+    }
+    sendHubCommand(allActions)
+}
+
 
 def lastCheckin() {    // send event for heartbeat
     def now = new Date()
@@ -234,7 +269,7 @@ void setupChildDevices() {
         case '_TZE200_wunufsil' :
         case '_TZE200_nh9m9emk' :
         case '_TZE200_7deq70b8' :
-        case '_TZE204_zpvusbtv' :       
+        case '_TZE204_zpvusbtv' :
             buttons = 2
             break
         case '_TZE200_tz32mtza' :

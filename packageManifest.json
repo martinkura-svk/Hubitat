@@ -1,10 +1,10 @@
 {
  "packageName":"Moes ZigBee Wall Switch 1/2/3-Gang",
  "author":"Martin Kura, kkossev",
- "version":"1.1.5",
+ "version":"1.2.0",
  "minimumHEVersion":"2.3.7.100",
- "dateReleased":"2024-06-28",
- "releaseNotes":"1.1.5 - 2024-06-28 - added TS0006 _TYZB01_ltundz9m _TZ3000_jyupj3fw\n1.1.4 - 2024-05-17 first version pushed to HPM, added _TZE204_4cl0dzt4",
+ "dateReleased":"2024-08-20",
+ "releaseNotes":"1.2.0 - 2024-08-20 - kkossev - added syncTuyaDateTime()\n1.1.7 - 2024-08-20 - kkossev - added _TZE204_dvosyycn (limited to 6 relays only);\n1.1.6 - 2024-07-22 - hhorigian - added _TZE204_rkbxtclc, _TZE204_zpvusbtv, _TZE204_rzdkn5rxc\n1.1.5 - 2024-06-28 - added TS0006 _TYZB01_ltundz9m _TZ3000_jyupj3fw\n1.1.4 - 2024-05-17 first version pushed to HPM, added _TZE204_4cl0dzt4",
  "communityLink":"https://community.hubitat.com/t/custom-device-drivers-wiki/465/1",
  "drivers": [
   {
