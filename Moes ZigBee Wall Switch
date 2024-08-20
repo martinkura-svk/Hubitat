@@ -17,11 +17,12 @@
  *  revision 1.1.4 - 2024-05-17 - hhorigian - added _TZE204_4cl0dzt4
  *  revision 1.1.5 - 2024-06-28 - kkossev - added TS0006 _TYZB01_ltundz9m _TZ3000_jyupj3fw
  *  revision 1.1.6 - 2024-07-22 - hhorigian - added _TZE204_rkbxtclc, _TZE204_zpvusbtv, _TZE204_rzdkn5rxc
+ *  revision 1.1.7 - 2024-08-20 - kkossev - (dev. version) added _TZE204_dvosyycn (limited to 6 relays only)
  *
 */
 
-static String version() { '1.1.6' }
-static String timeStamp() { '2024/07/22 3:30 PM' }
+static String version() { '1.1.7' }
+static String timeStamp() { '2024/08/20 7:38 AM' }
 
 import hubitat.device.HubAction
 import hubitat.device.Protocol
@@ -61,8 +62,7 @@ metadata {
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_rkbxtclc', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Keypad 3-gang switch'  // @Vartan BR - TR    
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_zpvusbtv', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 2-gang switch'  // @Vartan BR - QA       
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_rzdkn5rx', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 1-gang switch'  // @Vartan BR - QA       
-
-
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_dvosyycn', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Tuya ZXYH 8IN/8OUT board'  // https://community.hubitat.com/t/device-labels-changing-on-reboot/141754/5?u=kkossev
     }
     attribute 'switchLightMode', 'enum', ['OFF', 'ON', 'Position']
     attribute 'relayMode', 'enum', ['OFF', 'ON', 'Last state']
@@ -262,6 +262,9 @@ void setupChildDevices() {
         case '_TYZB01_ltundz9m' :
         case '_TZ3000_jyupj3fw' :
             buttons = 6
+            break
+        case '_TZE204_dvosyycn' :
+            buttons = 6              // limited to 6 relays only, actually has 8 relays and 8 inputs
             break
         case '_TZE204_dqolcpcp' :
             buttons = 12
