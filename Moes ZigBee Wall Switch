@@ -23,13 +23,13 @@
 */
 
 static String version() { '1.2.0' }
-static String timeStamp() { '2024/08/20 8:29 PM' }
+static String timeStamp() { '2024/08/20 8:55 PM' }
 
 import hubitat.device.HubAction
 import hubitat.device.Protocol
 import groovy.transform.Field
 
-@Field static final Boolean _DEBUG = true
+@Field static final Boolean _DEBUG = false
 
 metadata {
     definition(name: 'Moes ZigBee Wall Switch 1/2/3-Gang', namespace: 'Moes 1.31', author: 'Martin Kura', importUrl: 'https://raw.githubusercontent.com/martinkura-svk/Hubitat/main/Moes%20ZigBee%20Wall%20Switch') {
