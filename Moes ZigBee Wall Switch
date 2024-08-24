@@ -1,4 +1,4 @@
-/* groovylint-disable BuilderMethodWithSideEffects, CompileStatic, DuplicateListLiteral, DuplicateMapLiteral, DuplicateNumberLiteral, DuplicateStringLiteral, FactoryMethodName, ImplicitClosureParameter, ImplicitReturnStatement, LineLength, MethodParameterTypeRequired, MethodReturnTypeRequired, NestedBlockDepth, NoDef, NoJavaUtilDate, PublicMethodsBeforeNonPublicMethods, UnnecessaryGetter, VariableTypeRequired */
+/* groovylint-disable BuilderMethodWithSideEffects, CompileStatic, DuplicateListLiteral, DuplicateMapLiteral, DuplicateNumberLiteral, DuplicateStringLiteral, FactoryMethodName, ImplicitClosureParameter, ImplicitReturnStatement, InsecureRandom, LineLength, MethodCount, MethodParameterTypeRequired, MethodReturnTypeRequired, NestedBlockDepth, NoDef, NoJavaUtilDate, ParameterName, PublicMethodsBeforeNonPublicMethods, UnnecessaryGetter, UnnecessaryPackageReference, VariableTypeRequired */
 /*
  *  revision 1.0.0 - 2021-05-25 - martinkura - latest original driver version update
  *  revision 1.0.1 - 2022-02-22 - kkossev - added Moes 4-Gang Switch / ZTS-EU4
@@ -17,13 +17,14 @@
  *  revision 1.1.4 - 2024-05-17 - hhorigian - added _TZE204_4cl0dzt4
  *  revision 1.1.5 - 2024-06-28 - kkossev - added TS0006 _TYZB01_ltundz9m _TZ3000_jyupj3fw
  *  revision 1.1.6 - 2024-07-22 - hhorigian - added _TZE204_rkbxtclc, _TZE204_zpvusbtv, _TZE204_rzdkn5rxc
- *  revision 1.1.7 - 2024-08-20 - kkossev - added _TZE204_dvosyycn (limited to 6 relays only); 
+ *  revision 1.1.7 - 2024-08-20 - kkossev - added _TZE204_dvosyycn (limited to 6 relays only);
  *  revision 1.2.0 - 2024-08-20 - kkossev - added syncTuyaDateTime()
+ *  revision 1.2.1 - 2024-08-22 - kkossev - TratoZemismartKeypad configuration options
  *
 */
 
-static String version() { '1.2.0' }
-static String timeStamp() { '2024/08/20 8:55 PM' }
+static String version() { '1.2.1' }
+static String timeStamp() { '2024/08/22 8:04 PM' }
 
 import hubitat.device.HubAction
 import hubitat.device.Protocol
@@ -65,31 +66,62 @@ metadata {
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_rzdkn5rx', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Zemismart 1-gang switch'              // @Vartan BR - QA
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_dvosyycn', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Tuya ZXYH 8IN/8OUT board'             // https://community.hubitat.com/t/device-labels-changing-on-reboot/141754/5?u=kkossev
     }
-    attribute 'switchLightMode', 'enum', ['OFF', 'ON', 'Position']
-    attribute 'relayMode', 'enum', ['OFF', 'ON', 'Last state']
+    attribute 'switchLightMode', 'enum', ['off', 'on', 'position']
+    attribute 'powerOnBehavior', 'enum', ['off', 'on', 'last state']
     attribute 'lastCheckin', 'string'
+    attribute 'backlightLevel', 'number'
+    attribute 'childLock', 'enum', ['off', 'on']
+    attribute 'backlightMode', 'enum', ['off', 'on']
+    attribute 'lightIndicatorMode', 'enum', ['none', 'lit when on', 'lit when off']
+    attribute 'onColor', 'enum', ['Red', 'Blue', 'Green', 'White', 'Yellow', 'Magenta', 'Cyan', 'WarmWhite', 'WarmYellow']
+    attribute 'offColor', 'enum', ['Red', 'Blue', 'Green', 'White', 'Yellow', 'Magenta', 'Cyan', 'WarmWhite', 'WarmYellow']
+
 
     if (_DEBUG == true) {
         command 'testParse', [[name:'val', type: 'STRING', description: 'description', constraints: ['STRING']]]
+        command 'queryAllTuyaDP'
+        command 'test'
+        command 'tuyaTest', [[name:'dpCommand', type: 'STRING', description: 'Tuya DP Command', constraints: ['STRING']], [name:'dpValue',   type: 'STRING', description: 'Tuya DP value', constraints: ['STRING']], [name:'dpType',    type: 'ENUM',   constraints: ['DP_TYPE_VALUE', 'DP_TYPE_BOOL', 'DP_TYPE_ENUM'], description: 'DP data type']]    
     }
 
     preferences {
-        input(name: 'infoLogging', type: 'bool', title: ("Enable info logging"), description: '', defaultValue: true, submitOnChange: true, displayDuringSetup: true)
-        input(name: 'debugLogging', type: 'bool', title: ("Enable debug logging"), description: '', defaultValue: true, submitOnChange: true, displayDuringSetup: true)
-        input(name: 'switchLightMode', type: 'enum', title: ("Switch Backlight Mode"), description: ("- select type of backlight indicator (default: Position)"), options: ['OFF', 'ON', 'Position'], defaultValue: 'Position', submitOnChange: true)
-        input(name: 'relayMode', type: 'enum', title: ("Switch Relay Mode"), description: ("- select relay renew state after AC failed (default: OFF)"), options: ['OFF', 'ON', 'Last state'], defaultValue: 'OFF', submitOnChange: true)
+        input(name: 'infoLogging', type: 'bool', title: ("<b>Enable info logging</b>"), description: '', defaultValue: true)
+        input(name: 'debugLogging', type: 'bool', title: ("<b>Enable debug logging</b>"), description: '', defaultValue: true)
+        if (device) {
+            if (isTratoZemismartKeypad()) {
+                input(name: 'backlightLevel', type: 'number', title: ("<b>Backlight Level</b>"), description: ("Select backlight level (default: 50)"), defaultValue: 50, range: [0..100])
+                input(name: 'backlightMode', type: 'enum', title: ("<b>Backlight Mode</b>"), description: ("Select backlight mode (default: on)"), options: ['off', 'on'], defaultValue: 'on')
+                input(name: 'childLlock', type: 'enum', title: ("<b>Child Lock</b>"), description: ("Select child lock mode (default: off)"),  options: ['off', 'on'], defaultValue: 'off')
+                input(name: 'lightIndicatorMode', type: 'enum', title: ("<b>Light Indicator Mode</b>"), description: ("Select light indicator mode (default: none)"), options: ['none', 'lit when on', 'lit when off'], defaultValue: 'none')
+                input(name: 'onColor', type: 'enum', title: ("<b>On Color</b>"), description: ("Select on color (default: Blue)"), options: ['Red', 'Blue', 'Green', 'White', 'Yellow', 'Magenta', 'Cyan', 'WarmWhite', 'WarmYellow'], defaultValue: 'Blue')
+                input(name: 'offColor', type: 'enum', title: ("<b>Off Color</b>"), description: ("Select off color (default: White)"), options: ['Red', 'Blue', 'Green', 'White', 'Yellow', 'Magenta', 'Cyan', 'WarmWhite', 'WarmYellow'], defaultValue: 'White')
+
+            }
+            else {
+                input(name: 'switchLightMode', type: 'enum', title: ("<b>Switch Backlight Mode</b>"), description: ("Select type of backlight indicator (default: Position)"), options: ['off', 'on', 'position'], defaultValue: 'position')
+            }
+            input(name: 'powerOnBehavior', type: 'enum', title: ("<b>Switch Power On Behavior</b>"), description: ("Select relay renew state after AC failed (default: OFF)"), options: ['off', 'on', 'last state'], defaultValue: 'off')
+        }
     }
+}
+
+boolean isTratoZemismartKeypad() {
+    return device.getDataValue('manufacturer') in ['_TZE204_rzdkn5rx', '_TZE204_zpvusbtv', '_TZE204_rkbxtclc'/*, '_TZ3000_excgg5kb'*/]  // _TZ3000_excgg5kb for tests only - TOBEDEL!
+}
+
+void initializeVars() {
+    device.updateSetting('switchLightMode', [type:'enum', value: isTratoZemismartKeypad() ? 'on' : 'position'])
+    device.updateSetting('powerOnBehavior', [type:'enum', value:'off'])
+    device.updateSetting('debugLogging', [type:'bool', value:'true'])
+    device.updateSetting('infoLogging', [type:'bool', value:'true'])
 }
 
 def initialize() {
     if (infoLogging) { log.info 'Initializing...' }
-    log.warn 'Debug logging will be automatically disabled after 30 minutes!'
+    log.warn 'Debug logging will be automatically disabled after 24 hours!'
+    initializeVars()
     setupChildDevices()
-    device.updateSetting('switchLightMode', [type:'enum', value:'Position'])
-    device.updateSetting('relayMode', [type:'enum', value:'OFF'])
-    device.updateSetting('debugLogging', [type:'bool', value:'true'])
-    device.updateSetting('infoLogging', [type:'bool', value:'true'])
-    if (debugLogging) { runIn(1800, logsOff) }
+    if (debugLogging) { runIn(86400, logsOff) }
     refresh()
 }
 
@@ -100,25 +132,52 @@ void logsOff() {
 
 def installed() {
     log.info 'Installing...'
-    log.warn 'Debug logging will be automatically disabled after 30 minutes!'
+    log.warn 'Debug logging will be automatically disabled after 24 hours!'
     setupChildDevices()
-    device.updateSetting('switchLightMode', [type:'enum', value:'Position'])
-    device.updateSetting('relayMode', [type:'enum', value:'OFF'])
-    device.updateSetting('debugLogging', [type:'bool', value:'true'])
-    device.updateSetting('infoLogging', [type:'bool', value:'true'])
-    if (debugLogging) { runIn(1800, logsOff) }
+    initializeVars()
+    if (debugLogging) { runIn(86400, logsOff) }
     refresh()
 }
 
 def updated() {
+    List<String> cmds = []
+    String dpValHex = ''
+    int key = 0
     log.warn "debug logging is: ${debugLogging == true}"
     log.warn "description logging is: ${infoLogging == true}"
-    if (infoLogging) { log.info 'Updated...' }
+    if (debugLogging) { runIn(86400, logsOff) }
     if (debugLogging) { log.debug 'Parent updated' }
-    switchLightModeConfig() + relayModeConfig() + refresh()
+    cmds = switchLightModeConfig() + powerOnBehaviorConfig() /*+ refresh()*/
+    if (isTratoZemismartKeypad()) {
+        cmds += getTuyaCommand('66', DP_TYPE_VALUE, zigbee.convertToHexString(settings?.backlightLevel as int, 8))
+        key = BacklightSwitchOptions.find { it.value == settings?.backlightMode }?.key
+        cmds += getTuyaCommand('10', DP_TYPE_BOOL, zigbee.convertToHexString(key as int, 2))
+        key = ChildLockOptions.find { it.value == settings?.childLlock }?.key
+        cmds += getTuyaCommand('65', DP_TYPE_BOOL, zigbee.convertToHexString(key as int, 2))
+        key = LightIndicatorOptions.find { it.value == settings?.lightIndicatorMode }?.key
+        cmds += getTuyaCommand('0F', DP_TYPE_ENUM, zigbee.convertToHexString(key as int, 2))
+        key = ColorOptions.find { it.value == settings?.onColor }?.key
+        cmds += getTuyaCommand('67', DP_TYPE_ENUM, zigbee.convertToHexString(key as int, 2))
+        key = ColorOptions.find { it.value == settings?.offColor }?.key
+        cmds += getTuyaCommand('68', DP_TYPE_ENUM, zigbee.convertToHexString(key as int, 2))
+        key = PowerOnBehaviorOptions.find { it.value == settings?.powerOnBehavior }?.key
+        cmds += getTuyaCommand('0E', DP_TYPE_ENUM, zigbee.convertToHexString(key as int, 2))
+        
+    }
+    if (infoLogging) { log.info 'Updated...' }
+    sendZigbeeCommands(cmds)
 }
 
-private getCLUSTER_TUYA() { 0xEF00 }
+
+private static int getCLUSTER_TUYA()          { 0xEF00 }
+private static int getSETDATA()               { 0x00 }
+private static int getSETTIME()               { 0x24 }
+private static String getDP_TYPE_RAW()        { '01' }    // [ bytes ]
+private static String getDP_TYPE_BOOL()       { '01' }    // [ 0/1 ]
+private static String getDP_TYPE_VALUE()      { '02' }    // [ 4 byte value ]
+private static String getDP_TYPE_STRING()     { '03' }    // [ N byte string ]
+private static String getDP_TYPE_ENUM()       { '04' }    // [ 0-255 ]
+private static String getDP_TYPE_BITMAP()     { '05' }    // [ 1,2,4 bytes ] as bits
 
 // Parse incoming device messages to generate events
 def parse(String description) {
@@ -162,6 +221,13 @@ def parse(String description) {
                         }
                     }
                 }
+                else if (isTratoZemismartKeypad()) {
+                    parseTratoZemismartKeypad(descMap)  // andy event will be generated there
+                    return [:]
+                }
+                else {
+                    if (debugLogging) { log.debug "unprocessed Tuya command switchFunc: 0x${switchFunc} " }
+                }
             }
             else if (descMap?.command == '24') {
                 syncTuyaDateTime()
@@ -170,9 +236,162 @@ def parse(String description) {
     }
 }
 
-private void syncTuyaDateTime() {
-    // The data format for time synchronization, including standard timestamps and local timestamps. Standard timestamp (4 bytes)    local timestamp (4 bytes) Time synchronization data format: The standard timestamp is the total number of seconds from 00:00:00 on January 01, 1970 GMT to the present.
-    // For example, local timestamp = standard timestamp + number of seconds between standard time and local time (including time zone and daylight saving time).  // Y2K = 946684800
+void parseTratoZemismartKeypad(Map descMap) {
+    if (descMap?.data?.size() < 7) {
+        if (debugLogging) { log.warn "parseTratoZemismartKeypad: unprocessed descMap = ${descMap}" }
+        return
+    }
+    int dataLen = descMap?.data.size()
+    //log.warn "dataLen=${dataLen}"
+    //def transid = zigbee.convertHexToInt(descMap?.data[1])           // "transid" is just a "counter", a response will have the same transid as the command
+    if (dataLen <= 5) {
+        if (debugLogging) { log.warn "unprocessed short Tuya command response: dp_id=${descMap?.data[3]} dp=${descMap?.data[2]} fncmd_len=${fncmd_len} data=${descMap?.data})" }
+        return
+    }
+    for (int i = 0; i < (dataLen - 4); ) {
+        int dp = zigbee.convertHexToInt(descMap?.data[2 + i])          // "dp" field describes the action/message of a command frame
+        int dp_id = zigbee.convertHexToInt(descMap?.data[3 + i])       // "dp_identifier" is device dependant
+        int fncmd_len = zigbee.convertHexToInt(descMap?.data[5 + i])
+        int fncmd = getTuyaAttributeValue(descMap?.data, i)            //
+        processTuyaDP(descMap, dp, dp_id, fncmd)
+        i = i + fncmd_len + 4
+    }
+}
+
+@Field static final Map<Integer,String> SwitchStateOptions = [0: 'off', 1: 'on']
+@Field static final Map<Integer,String> ChildLockOptions = [0: 'off', 1: 'on']                          // 0x65
+@Field static final Map<Integer,String> PowerOnBehaviorOptions = [0: 'off', 1: 'on', 2: 'last state']   // 0x0E   'Turn power Off', 'Turn power On', 'Restore previous state'],
+@Field static final Map<Integer,String> BacklightSwitchOptions = [0: 'off', 1: 'on']      // 0x10
+@Field static final Map<Integer,String> LightIndicatorOptions = [0: 'none', 1: 'lit when on', 2: 'lit when off']        // 0x0F
+@Field static final Map<Integer,String> ColorOptions =  [0: 'Red', 1: 'Blue', 2: 'Green', 3: 'White', 4: 'Yellow', 5: 'Magenta', 6: 'Cyan', 7: 'WarmWhite', 8: 'WarmYellow']
+
+void processTuyaDP(final Map descMap, final int dp, final int dp_id, final int fncmd, final int dp_len=0) {
+    if (debugLogging) { log.trace "processTuyaDP: dp=${dp} dp_id=${dp_id} fncmd=${fncmd} dp_len=${dp_len}" }
+    Map event = [:]
+    String description = ''
+    String strValue = ''
+    switch (dp) {
+        case 0x01 : // (1) switch   // handled in the main parse method
+        case 0x02 : // (2) switch  Boolean	"{true,false}"
+        case 0x03 : // (3) switch
+            if (debugLogging) { log.debug "Switch ${dp} is ${fncmd}" }
+            break
+        case 0x07 : // timer 1  countdown_1	Integer {  "unit": "s",  "min": 0,  "max": 43200,  "scale": 0,  "step": 1 }
+        case 0x08 : // timer 2
+        case 0x09 : // timer 3
+            int gang = dp - 0x07 + 1
+            description = "Gang #${gang} auto timer is ${fncmd}"
+            break
+        case 0x0D : // (13) - Master Switch switch_all	Boolean	"{true,false}"
+            strValue = SwitchStateOptions[fncmd]
+            description = "Master switch is ${strValue}"
+            // event = createEvent(name: 'switch', value: strValue, descriptionText: description)   // already handled ?
+            break
+        case 0x0E :  // (14) Power ON Behavior (Restart Status) relay_status Enum	{ "range": ["off", "on", "memory" ]} [0: 'off', 1: 'on', 2: 'last state'] 
+            strValue = PowerOnBehaviorOptions[fncmd]
+            description = "Power ON Behavior is ${strValue}"
+            event = createEvent(name: 'powerOnBehavior', value: strValue, descriptionText: description)
+            break
+        case 0x0F : // (15) indicator status light_mode	Enum { "range": ["none", "relay", "pos"] }
+            strValue = LightIndicatorOptions[fncmd]
+            description = "Light indicator status is ${strValue}"
+            event = createEvent(name: 'lightIndicatorMode', value: strValue, descriptionText: description)
+            break
+        case 0x10 : // (16) "Backlight Switch", 0x10 bool   backlight_switch	Boolean	"{true,false}"
+            strValue = BacklightSwitchOptions[fncmd]
+            description = "Backlight mode is ${strValue}"
+            event = createEvent(name: 'backlightMode', value: strValue, descriptionText: description)
+            break
+        case 0x13 : // (19) delay-off schedule
+            strValue = fncmd
+            description = "delay-off schedule is ${strValue}"
+            break
+        case 0x1F : // (31) restart status 3
+        case 0x1E : // (30) restart status 2
+        case 0x1D : // (29) restart status 1 
+            int gang = dp - 0x1D + 1
+            description = "Restart status for gang #${gang} is ${fncmd}"
+            break
+        case 0x20 : // (32) unknown0x20
+            strValue = fncmd
+            description = "unknown0x20 is ${strValue}"
+            event = createEvent(name: 'unknown0x20', value: strValue, descriptionText: description)
+            break
+        case 0x65 :  // (101) child lock
+            strValue = ChildLockOptions[fncmd]
+            description = "Child lock is ${strValue}"
+            event = createEvent(name: 'childLock', value: strValue, descriptionText: description)
+            break
+        case 0x66 : // (102) backlight  "Backlight", 0x66, value, OK! backlight	Integer	{  "unit": "%",  "min": 0,  "max": 100,  "scale": 0,  "step": 1 }
+            strValue = fncmd
+            description = "Backlight level is ${strValue}"
+            event = createEvent(name: 'backlightLevel', value: strValue, descriptionText: description)
+            break
+        case 0x67 : // (103) onColor    night_light_color	Enum	
+            strValue = ColorOptions[fncmd]
+            description = "onColor is ${strValue}"
+            event = createEvent(name: 'onColor', value: strValue, descriptionText: description)
+            break
+        case 0x68 : // (104) offColor night_light_mode ?	Enum
+            strValue = ColorOptions[fncmd]
+            description = "offColor is ${strValue}"
+            event = createEvent(name: 'offColor', value: strValue, descriptionText: description)
+            break
+        case 0xD1 : // (209) cycle schedule
+            strValue = fncmd
+            description = "cycle schedule  is ${strValue}"
+            break
+        case 0xD2 : // (210) random schedule
+            strValue = fncmd
+            description = "random schedule  is ${strValue}"
+            break
+        default:
+            if (debugLogging) { log.warn "<b>NOT PROCESSED</b> Tuya cmd: dp=${dp} value=${fncmd} descMap.data = ${descMap?.data}" }
+            break
+    }
+    if (event != [:]) {
+        sendEvent(event)
+        if (infoLogging) { log.info description }
+    }
+    else if (description != '') {
+        if (infoLogging) { log.info description }
+    }
+}
+
+
+private int getTuyaAttributeValue(final List<String> _data, final int index) {
+    int retValue = 0
+    if (_data.size() >= 6) {
+        int dataLength = zigbee.convertHexToInt(_data[5 + index])
+        if (dataLength == 0) { return 0 }
+        int power = 1
+        for (i in dataLength..1) {
+            retValue = retValue + power * zigbee.convertHexToInt(_data[index + i + 5])
+            power = power * 256
+        }
+    }
+    return retValue
+}
+
+String getPACKET_ID() { return zigbee.convertToHexString(new Random().nextInt(65536), 4) }
+
+List<String> getTuyaCommand(String dp, String dp_type, String fncmd, int tuyaCmdDefault = SETDATA) { return sendTuyaCommand(dp, dp_type, fncmd, tuyaCmdDefault) }
+List<String> sendTuyaCommand(String dp, String dp_type, String fncmd, int tuyaCmdDefault = SETDATA) {
+    List<String> cmds = []
+    int tuyaCmd = tuyaCmdDefault
+    cmds = zigbee.command(CLUSTER_TUYA, tuyaCmd, [:], delay = 201, PACKET_ID + dp + dp_type + zigbee.convertToHexString((int)(fncmd.length() / 2), 4) + fncmd )
+    if (debugLogging) { "${device.displayName} getTuyaCommand (dp=$dp fncmd=$fncmd dp_type=$dp_type) = ${cmds}" }
+    return cmds
+}
+
+public void tuyaTest(String dpCommand, String dpValue, String dpTypeString ) {
+    String dpType   = dpTypeString == 'DP_TYPE_VALUE' ? DP_TYPE_VALUE : dpTypeString == 'DP_TYPE_BOOL' ? DP_TYPE_BOOL : dpTypeString == 'DP_TYPE_ENUM' ? DP_TYPE_ENUM : null
+    String dpValHex = dpTypeString == 'DP_TYPE_VALUE' ? zigbee.convertToHexString(dpValue as int, 8) : dpValue
+    if (settings?.logEnable) { log.warn "${device.displayName}  sending TEST command=${dpCommand} value=${dpValue} ($dpValHex) type=${dpType}" }
+    sendZigbeeCommands( sendTuyaCommand(dpCommand, dpType, dpValHex) )
+}
+
+void syncTuyaDateTime() {
     long offset = 0
     int offsetHours = 0
     Calendar cal = Calendar.getInstance()    //it return same time as new Date()
@@ -186,20 +405,18 @@ private void syncTuyaDateTime() {
     }
     //
     List<String> cmds = zigbee.command(0xEF00, 0x24, '0008' + zigbee.convertToHexString((int)(now() / 1000), 8) + zigbee.convertToHexString((int)((now() + offset) / 1000), 8))
-    //String cmds = '0008' + zigbee.convertToHexString((int)(now() / 1000), 8) + zigbee.convertToHexString((int)((now() + offset) / 1000), 8)
-    //sendHubCommand(new HubAction("he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${cmds}}", Protocol.ZIGBEE))
     sendZigbeeCommands(cmds)
-     if (debugLogging) { log.debug "${device.displayName} Tuya device time synchronized" }
+    if (debugLogging) { log.debug "${device.displayName} Tuya device time synchronized" }
 }
 
-public void sendZigbeeCommands(List<String> cmd) {
+void sendZigbeeCommands(List<String> cmd) {
+    if (debugLogging) { log.debug "${device.displayName} sendZigbeeCommands: ${cmd}" }
     hubitat.device.HubMultiAction allActions = new hubitat.device.HubMultiAction()
     cmd.each {
         allActions.add(new hubitat.device.HubAction(it, hubitat.device.Protocol.ZIGBEE))
     }
     sendHubCommand(allActions)
 }
-
 
 def lastCheckin() {    // send event for heartbeat
     def now = new Date()
@@ -222,6 +439,9 @@ def on() {
 
 def refresh() {
     if (infoLogging) { log.info 'Refreshing...' }
+    if (isTratoZemismartKeypad()) {
+        return [queryAllTuyaDP()]
+    }
     return  [
         lastCheckin()
     ]
@@ -349,44 +569,75 @@ void deleteObsoleteChildren() {
     }
 }
 
-def switchLightModeConfig() {
-//def cmds = []
-    switch (switchLightMode) {
-        case 'OFF':
-            if (infoLogging) { log.info 'Backlight - OFF' }
-            zigbee.command(0xEF00, 0x0, '00010f04000100')
-            break
-        case 'ON':
-            if (infoLogging) { log.info 'Backlight - ON' }
-            zigbee.command(0xEF00, 0x0, '00010f04000101')
-            break
-        case 'Position':
-            if (infoLogging) { log.info 'Backlight - position' }
-            zigbee.command(0xEF00, 0x0, '00010f04000102')
-            break
+List<String> switchLightModeConfig() {
+    List<String> cmds = []
+    if (isTratoZemismartKeypad()) {
+        int bl = settings?.switchLightMode == 'on' ? 1 : 0
+        String dpValHex = zigbee.convertToHexString(bl as int, 2)
+        cmds = getTuyaCommand('10', DP_TYPE_BOOL, dpValHex)
     }
+    else {
+        switch (switchLightMode) {
+            case 'off':
+                if (infoLogging) { log.info 'Backlight - OFF' }
+                cmds = zigbee.command(0xEF00, 0x0, '00010f04000100')
+                break
+            case 'on':
+                if (infoLogging) { log.info 'Backlight - ON' }
+                cmds = zigbee.command(0xEF00, 0x0, '00010f04000101')
+                break
+            case 'position':
+                if (infoLogging) { log.info 'Backlight - position' }
+                cmds = zigbee.command(0xEF00, 0x0, '00010f04000102')
+                break
+        }
+    }
+    return cmds
 }
 
-def relayModeConfig() {
-//def cmds = []
-    switch (relayMode) {
-        case 'OFF':
-            if (infoLogging) { log.info 'Relay state - OFF' }
-            zigbee.command(0xEF00, 0x0, '00010e04000100')
-            break
-        case 'ON':
-            if (infoLogging) { log.info 'Relay state - ON' }
-            zigbee.command(0xEF00, 0x0, '00010e04000101')
-            break
-        case 'Last state':
-            if (infoLogging) { log.info 'Relay state - last state' }
-            zigbee.command(0xEF00, 0x0, '00010e04000102')
-            break
+List<String> powerOnBehaviorConfig() {
+    List<String> cmds = []
+    if (isTratoZemismartKeypad()) {
+        int rl = settings?.powerOnBehavior == 'off' ? 0 : settings?.powerOnBehavior == 'on' ? 1 : 2
+        if (debugLogging) { log.debug "Relay mode: ${rl} (${settings?.powerOnBehavior})" }
+        String dpValHex = zigbee.convertToHexString(rl, 2)
+        cmds = getTuyaCommand('0E', DP_TYPE_ENUM, dpValHex)
     }
+    else {
+        switch (powerOnBehavior) {
+            case 'off':
+                if (infoLogging) { log.info 'Relay state - OFF' }
+                cmds = zigbee.command(0xEF00, 0x0, '00010e04000100')
+                break
+            case 'on':
+                if (infoLogging) { log.info 'Relay state - ON' }
+                cmds = zigbee.command(0xEF00, 0x0, '00010e04000101')
+                break
+            case 'last state':
+                if (infoLogging) { log.info 'Relay state - last state' }
+                cmds = zigbee.command(0xEF00, 0x0, '00010e04000102')
+                break
+        }
+    }
+    return cmds
+}
+
+
+
+void queryAllTuyaDP() {
+    log.trace 'queryAllTuyaDP()'
+    List<String> cmds = zigbee.command(0xEF00, 0x03)
+    sendZigbeeCommands(cmds)
 }
 
 void testParse(final String description) {
     log.warn "testParse: ${description}"
     parse(description)
     log.trace '---end of testParse---'
+}
+
+void test() {
+    log.trace 'test()'
+    List<String> cmds = childModeConfig()
+    sendZigbeeCommands(cmds)
 }
