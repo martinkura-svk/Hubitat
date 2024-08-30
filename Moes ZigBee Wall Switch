@@ -19,12 +19,12 @@
  *  revision 1.1.6 - 2024-07-22 - hhorigian - added _TZE204_rkbxtclc, _TZE204_zpvusbtv, _TZE204_rzdkn5rxc
  *  revision 1.1.7 - 2024-08-20 - kkossev - added _TZE204_dvosyycn (limited to 6 relays only);
  *  revision 1.2.0 - 2024-08-20 - kkossev - added syncTuyaDateTime()
- *  revision 1.2.1 - 2024-08-22 - kkossev - TratoZemismartKeypad configuration options
+ *  revision 1.3.0 - 2024-08-30 - kkossev/hhorigian - TratoZemismartKeypad configuration options
  *
 */
 
-static String version() { '1.2.1' }
-static String timeStamp() { '2024/08/22 8:04 PM' }
+static String version() { '1.3.0' }
+static String timeStamp() { '2024/08/30 6:33 PM' }
 
 import hubitat.device.HubAction
 import hubitat.device.Protocol
@@ -89,12 +89,12 @@ metadata {
         input(name: 'debugLogging', type: 'bool', title: ("<b>Enable debug logging</b>"), description: '', defaultValue: true)
         if (device) {
             if (isTratoZemismartKeypad()) {
-                input(name: 'backlightLevel', type: 'number', title: ("<b>Backlight Level</b>"), description: ("Select backlight level (default: 50)"), defaultValue: 50, range: [0..100])
-                input(name: 'backlightMode', type: 'enum', title: ("<b>Backlight Mode</b>"), description: ("Select backlight mode (default: on)"), options: ['off', 'on'], defaultValue: 'on')
+                input(name: 'backlightLevel', type: 'number', title: ("<b>Led: Backlight Level</b>"), description: ("Select led backlight level 0-100 (default: 50)"), defaultValue: 50, range: [0..100])
+                input(name: 'backlightMode', type: 'enum', title: ("<b>Led: Backlight Mode</b>"), description: ("Select backlight mode (default: on)"), options: ['off', 'on'], defaultValue: 'on')
+                input(name: 'lightIndicatorMode', type: 'enum', title: ("<b>Led: Indicator Mode</b>"), description: ("Select led indicator mode (default: lit when on)"), options: ['none', 'lit when on', 'lit when off'], defaultValue: 'lit when on')
+                input(name: 'onColor', type: 'enum', title: ("<b>Led: On Color</b>"), description: ("Select led color when switch is ON(default: Blue)"), options: ['Red', 'Blue', 'Green', 'White', 'Yellow', 'Magenta', 'Cyan', 'WarmWhite', 'WarmYellow'], defaultValue: 'Blue')
+                input(name: 'offColor', type: 'enum', title: ("<b>Led: Off Color</b>"), description: ("Select led color when switch is OFF(default: White)"), options: ['Red', 'Blue', 'Green', 'White', 'Yellow', 'Magenta', 'Cyan', 'WarmWhite', 'WarmYellow'], defaultValue: 'White')
                 input(name: 'childLlock', type: 'enum', title: ("<b>Child Lock</b>"), description: ("Select child lock mode (default: off)"),  options: ['off', 'on'], defaultValue: 'off')
-                input(name: 'lightIndicatorMode', type: 'enum', title: ("<b>Light Indicator Mode</b>"), description: ("Select light indicator mode (default: none)"), options: ['none', 'lit when on', 'lit when off'], defaultValue: 'none')
-                input(name: 'onColor', type: 'enum', title: ("<b>On Color</b>"), description: ("Select on color (default: Blue)"), options: ['Red', 'Blue', 'Green', 'White', 'Yellow', 'Magenta', 'Cyan', 'WarmWhite', 'WarmYellow'], defaultValue: 'Blue')
-                input(name: 'offColor', type: 'enum', title: ("<b>Off Color</b>"), description: ("Select off color (default: White)"), options: ['Red', 'Blue', 'Green', 'White', 'Yellow', 'Magenta', 'Cyan', 'WarmWhite', 'WarmYellow'], defaultValue: 'White')
 
             }
             else {
