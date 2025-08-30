@@ -25,11 +25,11 @@
  *  revision 1.3.3 - 2024-10-23 - kkossev - added TS0601 _TZE204_lmgrbuwf (NOVADIGITAL)
  *  revision 1.3.4 - 2025-04-07 - kkossev - added TS0601 _TZE204_g4au0afs (NOVADIGITAL); added TS0601 _TZE200_mwvfvw8g _TZE200_cduqh1l0 _TZE200_emxxanvi ; added TS0601 _TZE200_kyfqmmyl _TZE200_2hf7x9n3 _TZE204_atpwqgml _TZE200_bynnczcb
  *  revision 1.3.5 - 2025-06-07 - kkossev - added TS0601 _TZE204_cduqh1l0
- *
+ *  revision 1.4.0 - 2025-08-30 - kkossev - (dev.) added Moes Star Feather Smart Switches SFL02-Z (1,2,3,4 gangs); added Nova Digital Topazio Smart Switches (without the 'scene mode')
 */
 
-static String version() { '1.3.5' }
-static String timeStamp() { '2025/06/07 11:33 AM' }
+static String version() { '1.4.0' }
+static String timeStamp() { '2025/08/30 6:37 PM' }
 
 import hubitat.device.HubAction
 import hubitat.device.Protocol
@@ -81,6 +81,19 @@ metadata {
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_2hf7x9n3', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'46', deviceJoinName: 'Interruptor touch Zigbee 3 Teclas'
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_atpwqgml', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'46', deviceJoinName: 'Interruptor touch Zigbee 3 Teclas'
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_bynnczcb', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'46', deviceJoinName: 'Interruptor touch Zigbee 3 Teclas'
+        // Moes Star Feather Smart Switches
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_ydkqbmpt', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Moes Star Feather Smart Switch 1 Gang'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_z3u99qxt', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Moes Star Feather Smart Switch 1 Gang'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_uenof8jd', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Moes Star Feather Smart Switch 2 Gang'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_tzyy0rtq', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Moes Star Feather Smart Switch 2 Gang'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_hktk6hze', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Moes Star Feather Smart Switch 2 Gang'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_wv9ukqca', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Moes Star Feather Smart Switch 3 Gang'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_zo0cfekv', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Moes Star Feather Smart Switch 3 Gang'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_rd8cdssd', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Moes Star Feather Smart Switch 3 Gang'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_dq8bu0pt', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Moes Star Feather Smart Switch 4 Gang'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_9dhenr94', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Moes Star Feather Smart Switch 4 Gang'
+        // Nova Digital Topazio Smart Switches  
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_hmabvy81', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Nova Digital Topazio Smart Switch 4 Gang'
     }
     
     attribute 'switchLightMode', 'enum', ['off', 'on', 'position']
@@ -90,6 +103,8 @@ metadata {
     attribute 'childLock', 'enum', ['off', 'on']
     attribute 'backlightMode', 'enum', ['off', 'on']
     attribute 'lightIndicatorMode', 'enum', ['none', 'lit when on', 'lit when off']
+    attribute 'vibrationMode', 'enum', ['Gear 0', 'Gear 1', 'Gear 2', 'Gear 3', 'Gear 4', 'Gear 5']
+    attribute 'inductionMode', 'enum', ['off', 'on']
     attribute 'onColor', 'enum', ['Red', 'Blue', 'Green', 'White', 'Yellow', 'Magenta', 'Cyan', 'WarmWhite', 'WarmYellow']
     attribute 'offColor', 'enum', ['Red', 'Blue', 'Green', 'White', 'Yellow', 'Magenta', 'Cyan', 'WarmWhite', 'WarmYellow']
 
@@ -112,7 +127,12 @@ metadata {
                 input(name: 'onColor', type: 'enum', title: ("<b>Led: On Color</b>"), description: ("Select led color when switch is ON(default: Blue)"), options: ['Red', 'Blue', 'Green', 'White', 'Yellow', 'Magenta', 'Cyan', 'WarmWhite', 'WarmYellow'], defaultValue: 'Blue')
                 input(name: 'offColor', type: 'enum', title: ("<b>Led: Off Color</b>"), description: ("Select led color when switch is OFF(default: White)"), options: ['Red', 'Blue', 'Green', 'White', 'Yellow', 'Magenta', 'Cyan', 'WarmWhite', 'WarmYellow'], defaultValue: 'White')
                 input(name: 'childLlock', type: 'enum', title: ("<b>Child Lock</b>"), description: ("Select child lock mode (default: off)"),  options: ['off', 'on'], defaultValue: 'off')
-
+            }
+            else if (isMoesStarFeatherSwitch()) {
+                input(name: 'backlightMode', type: 'enum', title: ("<b>Led: Backlight Mode</b>"), description: ("Select backlight mode (default: on)"), options: ['off', 'on'], defaultValue: 'on')
+                input(name: 'lightIndicatorMode', type: 'enum', title: ("<b>Led: Indicator Mode</b>"), description: ("Select led indicator mode (default: lit when on)"), options: ['none', 'lit when on', 'lit when off'], defaultValue: 'lit when on')
+                input(name: 'vibrationMode', type: 'enum', title: ("<b>Vibration Mode</b>"), description: ("Select vibration intensity for tactile feedback (default: Gear 1)"), options: ['Gear 0', 'Gear 1', 'Gear 2', 'Gear 3', 'Gear 4', 'Gear 5'], defaultValue: 'Gear 1')
+                input(name: 'inductionMode', type: 'enum', title: ("<b>Induction Mode</b>"), description: ("Enable/disable induction sensing (default: off)"), options: ['off', 'on'], defaultValue: 'off')
             }
             else {
                 input(name: 'switchLightMode', type: 'enum', title: ("<b>Switch Backlight Mode</b>"), description: ("Select type of backlight indicator (default: Position)"), options: ['off', 'on', 'position'], defaultValue: 'position')
@@ -126,8 +146,24 @@ boolean isTratoZemismartKeypad() {
     return device.getDataValue('manufacturer') in ['_TZE204_rzdkn5rx', '_TZE204_zpvusbtv', '_TZE204_rkbxtclc'/*, '_TZ3000_excgg5kb'*/]  // _TZ3000_excgg5kb for tests only - TOBEDEL!
 }
 
+boolean isMoesStarFeatherSwitch() {
+    return device.getDataValue('manufacturer') in ['_TZE200_ydkqbmpt', '_TZE200_z3u99qxt', '_TZE200_uenof8jd', '_TZE200_tzyy0rtq', '_TZE200_hktk6hze', '_TZE200_wv9ukqca', '_TZE200_zo0cfekv', '_TZE200_rd8cdssd', '_TZE200_dq8bu0pt', '_TZE200_9dhenr94', '_TZE200_hmabvy81']
+}
+
 void initializeVars() {
-    device.updateSetting('switchLightMode', [type:'enum', value: isTratoZemismartKeypad() ? 'on' : 'position'])
+    if (isTratoZemismartKeypad()) {
+        device.updateSetting('backlightMode', [type:'enum', value:'on'])
+        device.updateSetting('lightIndicatorMode', [type:'enum', value:'lit when on'])
+    }
+    else if (isMoesStarFeatherSwitch()) {
+        device.updateSetting('backlightMode', [type:'enum', value:'on'])
+        device.updateSetting('lightIndicatorMode', [type:'enum', value:'lit when on'])
+        device.updateSetting('vibrationMode', [type:'enum', value:'Gear 1'])
+        device.updateSetting('inductionMode', [type:'enum', value:'off'])
+    }
+    else {
+        device.updateSetting('switchLightMode', [type:'enum', value:'position'])
+    }
     device.updateSetting('powerOnBehavior', [type:'enum', value:'off'])
     device.updateSetting('debugLogging', [type:'bool', value:'true'])
     device.updateSetting('infoLogging', [type:'bool', value:'true'])
@@ -165,6 +201,9 @@ def updated() {
     if (debugLogging) { runIn(86400, logsOff) }
     if (debugLogging) { log.debug 'Parent updated' }
     cmds = switchLightModeConfig() + powerOnBehaviorConfig() /*+ refresh()*/
+    if (isMoesStarFeatherSwitch()) {
+        cmds += vibrationModeConfig() + inductionModeConfig()
+    }
     if (isTratoZemismartKeypad()) {
         cmds += getTuyaCommand('66', DP_TYPE_VALUE, zigbee.convertToHexString(settings?.backlightLevel as int, 8))
         key = BacklightSwitchOptions.find { it.value == settings?.backlightMode }?.key
@@ -208,6 +247,12 @@ def parse(String description) {
                 def switchAttr = (descMap?.data[3])
                 def switchState = (descMap?.data[6]) == '01' ? 'on' : 'off'
                 if (switchFunc in ['01', '02', '03', '04', '05', '06'] && switchAttr == '01') {
+                    // Check if this is a Star Feather device - if so, skip traditional switch logic
+                    if (isMoesStarFeatherSwitch()) {
+                        parseMoesStarFeatherSwitch(descMap)  // handle Star Feather specific parsing
+                        return [:]
+                    }
+                    // Traditional switch logic for Moes and Trato devices
                     def cd = getChildDevice("${device.id}-${switchFunc}")
                     if (cd == null) {
                         return createEvent(name: 'switch', value: switchState)
@@ -271,6 +316,26 @@ void parseTratoZemismartKeypad(Map descMap) {
         int fncmd_len = zigbee.convertHexToInt(descMap?.data[5 + i])
         int fncmd = getTuyaAttributeValue(descMap?.data, i)            //
         processTuyaDP(descMap, dp, dp_id, fncmd)
+        i = i + fncmd_len + 4
+    }
+}
+
+void parseMoesStarFeatherSwitch(Map descMap) {
+    if (descMap?.data?.size() < 7) {
+        if (debugLogging) { log.warn "parseMoesStarFeatherSwitch: unprocessed descMap = ${descMap}" }
+        return
+    }
+    int dataLen = descMap?.data.size()
+    if (dataLen <= 5) {
+        if (debugLogging) { log.warn "unprocessed short Tuya command response: dp_id=${descMap?.data[3]} dp=${descMap?.data[2]} data=${descMap?.data})" }
+        return
+    }
+    for (int i = 0; i < (dataLen - 4); ) {
+        int dp = zigbee.convertHexToInt(descMap?.data[2 + i])          // "dp" field describes the action/message of a command frame
+        int dp_id = zigbee.convertHexToInt(descMap?.data[3 + i])       // "dp_identifier" is device dependant
+        int fncmd_len = zigbee.convertHexToInt(descMap?.data[5 + i])
+        int fncmd = getTuyaAttributeValue(descMap?.data, i)            //
+        processStarFeatherDP(descMap, dp, dp_id, fncmd)
         i = i + fncmd_len + 4
     }
 }
@@ -378,6 +443,151 @@ void processTuyaDP(final Map descMap, final int dp, final int dp_id, final int f
     }
 }
 
+void processStarFeatherDP(final Map descMap, final int dp, final int dp_id, final int fncmd, final int dp_len=0) {
+    if (debugLogging) { log.trace "processStarFeatherDP: dp=${dp} dp_id=${dp_id} fncmd=${fncmd} dp_len=${dp_len}" }
+    Map event = [:]
+    String description = ''
+    String strValue = ''
+    switch (dp) {
+        case 0x01 : // (1) scene_1 action
+            if (debugLogging) { log.debug "Scene 1 action triggered" }
+            sendEvent(name: 'pushed', value: 1, descriptionText: 'Scene 1 button pushed', isStateChange: true)
+            break
+        case 0x02 : // (2) scene_2 action  
+            if (debugLogging) { log.debug "Scene 2 action triggered" }
+            sendEvent(name: 'pushed', value: 2, descriptionText: 'Scene 2 button pushed', isStateChange: true)
+            break
+        case 0x03 : // (3) scene_3 action
+            if (debugLogging) { log.debug "Scene 3 action triggered" }
+            sendEvent(name: 'pushed', value: 3, descriptionText: 'Scene 3 button pushed', isStateChange: true)
+            break
+        case 0x04 : // (4) scene_4 action
+            if (debugLogging) { log.debug "Scene 4 action triggered" }
+            sendEvent(name: 'pushed', value: 4, descriptionText: 'Scene 4 button pushed', isStateChange: true)
+            break
+        case 0x12 : // (18) mode_l1 - Switch1 mode
+            strValue = fncmd == 0 ? 'switch' : 'scene'
+            description = "Switch 1 mode is ${strValue}"
+            if (debugLogging) { log.debug description }
+            break
+        case 0x13 : // (19) mode_l2 - Switch2 mode
+            strValue = fncmd == 0 ? 'switch' : 'scene'
+            description = "Switch 2 mode is ${strValue}"
+            if (debugLogging) { log.debug description }
+            break
+        case 0x14 : // (20) mode_l3 - Switch3 mode
+            strValue = fncmd == 0 ? 'switch' : 'scene'
+            description = "Switch 3 mode is ${strValue}"
+            if (debugLogging) { log.debug description }
+            break
+        case 0x15 : // (21) mode_l4 - Switch4 mode
+            strValue = fncmd == 0 ? 'switch' : 'scene'
+            description = "Switch 4 mode is ${strValue}"
+            if (debugLogging) { log.debug description }
+            break
+        case 0x18 : // (24) state_l1 - Switch 1 state
+            strValue = fncmd == 1 ? 'on' : 'off'
+            def cd1 = getChildDevice("${device.id}-01")
+            if (cd1 != null) {
+                cd1.parse([[name: 'switch', value: strValue, descriptionText: "Child switch 1 is $strValue"]])
+            } else {
+                sendEvent(name: 'switch', value: strValue, descriptionText: "Switch 1 is $strValue")
+            }
+            updateParentSwitchState()
+            break
+        case 0x19 : // (25) state_l2 - Switch 2 state
+            strValue = fncmd == 1 ? 'on' : 'off'
+            def cd2 = getChildDevice("${device.id}-02")
+            if (cd2 != null) {
+                cd2.parse([[name: 'switch', value: strValue, descriptionText: "Child switch 2 is $strValue"]])
+            }
+            updateParentSwitchState()
+            break
+        case 0x1A : // (26) state_l3 - Switch 3 state
+            strValue = fncmd == 1 ? 'on' : 'off'
+            def cd3 = getChildDevice("${device.id}-03")
+            if (cd3 != null) {
+                cd3.parse([[name: 'switch', value: strValue, descriptionText: "Child switch 3 is $strValue"]])
+            }
+            updateParentSwitchState()
+            break
+        case 0x1B : // (27) state_l4 - Switch 4 state
+            strValue = fncmd == 1 ? 'on' : 'off'
+            def cd4 = getChildDevice("${device.id}-04")
+            if (cd4 != null) {
+                cd4.parse([[name: 'switch', value: strValue, descriptionText: "Child switch 4 is $strValue"]])
+            }
+            updateParentSwitchState()
+            break
+        case 0x1E : // (30) countdown_l1 - Timer 1
+        case 0x1F : // (31) countdown_l2 - Timer 2  
+        case 0x20 : // (32) countdown_l3 - Timer 3
+        case 0x21 : // (33) countdown_l4 - Timer 4
+            int gang = dp - 0x1E + 1
+            description = "Gang #${gang} countdown timer is ${fncmd} seconds"
+            if (debugLogging) { log.debug description }
+            break
+        case 0x24 : // (36) backlight_mode
+            strValue = BacklightSwitchOptions[fncmd]
+            description = "Backlight mode is ${strValue}"
+            event = createEvent(name: 'backlightMode', value: strValue, descriptionText: description)
+            break
+        case 0x25 : // (37) indicator_status
+            strValue = fncmd == 0 ? 'none' : fncmd == 1 ? 'lit when on' : 'lit when off'
+            description = "Light indicator status is ${strValue}"
+            event = createEvent(name: 'lightIndicatorMode', value: strValue, descriptionText: description)
+            break
+        case 0x26 : // (38) power_on_behavior
+            strValue = PowerOnBehaviorOptions[fncmd]
+            description = "Power ON Behavior is ${strValue}"
+            event = createEvent(name: 'powerOnBehavior', value: strValue, descriptionText: description)
+            break
+        case 0x67 : // (103) induction_mode
+            strValue = fncmd == 1 ? 'on' : 'off'
+            description = "Induction mode is ${strValue}"
+            event = createEvent(name: 'inductionMode', value: strValue, descriptionText: description)
+            break
+        case 0x68 : // (104) vibration_mode
+            strValue = "Gear ${fncmd}"
+            description = "Vibration mode is ${strValue}"
+            event = createEvent(name: 'vibrationMode', value: strValue, descriptionText: description)
+            break
+        case 0x69 : // (105) momentary_1
+        case 0x6A : // (106) momentary_2
+        case 0x6B : // (107) momentary_3
+        case 0x6C : // (108) momentary_4
+            int gang = dp - 0x69 + 1
+            description = "Gang #${gang} momentary timer is ${fncmd} seconds"
+            if (debugLogging) { log.debug description }
+            break
+        default:
+            if (debugLogging) { log.warn "<b>NOT PROCESSED</b> Star Feather Tuya cmd: dp=${dp} value=${fncmd} descMap.data = ${descMap?.data}" }
+            break
+    }
+    if (event != [:]) {
+        sendEvent(event)
+        if (infoLogging) { log.info description }
+    }
+    else if (description != '') {
+        if (infoLogging) { log.info description }
+    }
+}
+
+void updateParentSwitchState() {
+    def cdsOn = 0
+    // count number of switches on
+    getChildDevices().each { child ->
+        if (child.currentValue('switch') == 'on') {
+            cdsOn++
+        }
+    }
+    String parentState = cdsOn > 0 ? 'on' : 'off'
+    if (device.currentValue('switch') != parentState) {
+        if (debugLogging) { log.debug "Parent Switch ${parentState.toUpperCase()}" }
+        sendEvent(name: 'switch', value: parentState)
+    }
+}
+
 
 private int getTuyaAttributeValue(final List<String> _data, final int index) {
     int retValue = 0
@@ -474,17 +684,39 @@ private String getChildId(childDevice) {
 void componentOn(childDevice) {
     if (debugLogging) { log.debug "component state is ON - ${childDevice} {${childDevice.deviceNetworkId}}" }
     if (infoLogging) { log.info "${childDevice} is ON" }
-    String fullDataOn = '0001' + getChildId(childDevice) + '01000101'
-    sendHubCommand(new HubAction("he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${fullDataOn}}", Protocol.ZIGBEE))
-    if (debugLogging) { log.debug { "{executed} 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${fullDataOn}}" } }
+    
+    if (isMoesStarFeatherSwitch()) {
+        // Star Feather switches use different data points: 0x18(24), 0x19(25), 0x1A(26), 0x1B(27)
+        String childId = getChildId(childDevice)
+        int dpValue = 0x18 + (childId as int) - 1  // Convert to hex: 01->0x18, 02->0x19, etc.
+        String dpHex = zigbee.convertToHexString(dpValue, 2)
+        List<String> cmds = getTuyaCommand(dpHex, DP_TYPE_BOOL, '01')
+        sendZigbeeCommands(cmds)
+    } else {
+        // Original method for other switches
+        String fullDataOn = '0001' + getChildId(childDevice) + '01000101'
+        sendHubCommand(new HubAction("he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${fullDataOn}}", Protocol.ZIGBEE))
+        if (debugLogging) { log.debug { "{executed} 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${fullDataOn}}" } }
+    }
 }
 
 void componentOff(childDevice) {
     if (debugLogging) { log.debug "component state is OFF - ${childDevice} {${childDevice.deviceNetworkId}}" }
     if (infoLogging) { log.info "${childDevice} is OFF" }
-    String fullDataOff = '0001' + getChildId(childDevice) + '01000100'
-    sendHubCommand(new HubAction("he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${fullDataOff}}", Protocol.ZIGBEE))
-    if (debugLogging) { log.debug "{executed} 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${fullDataOff}}" }
+    
+    if (isMoesStarFeatherSwitch()) {
+        // Star Feather switches use different data points: 0x18(24), 0x19(25), 0x1A(26), 0x1B(27)
+        String childId = getChildId(childDevice)
+        int dpValue = 0x18 + (childId as int) - 1  // Convert to hex: 01->0x18, 02->0x19, etc.
+        String dpHex = zigbee.convertToHexString(dpValue, 2)
+        List<String> cmds = getTuyaCommand(dpHex, DP_TYPE_BOOL, '00')
+        sendZigbeeCommands(cmds)
+    } else {
+        // Original method for other switches
+        String fullDataOff = '0001' + getChildId(childDevice) + '01000100'
+        sendHubCommand(new HubAction("he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${fullDataOff}}", Protocol.ZIGBEE))
+        if (debugLogging) { log.debug "{executed} 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {${fullDataOff}}" }
+    }
 }
 
 void componentRefresh(childDevice) {
@@ -503,6 +735,8 @@ void setupChildDevices() {
         case '_TZE200_wfxuhoea' :
         case '_TZE200_gbagoilo' :
         case '_TZE204_rzdkn5rx' :
+        case '_TZE200_ydkqbmpt' :  // Moes Star Feather 1 Gang
+        case '_TZE200_z3u99qxt' :  // Moes Star Feather 1 Gang
             buttons = 1
             break
         case '_TZE200_g1ib5ldv' :
@@ -510,6 +744,9 @@ void setupChildDevices() {
         case '_TZE200_nh9m9emk' :
         case '_TZE200_7deq70b8' :
         case '_TZE204_zpvusbtv' :
+        case '_TZE200_uenof8jd' :  // Moes Star Feather 2 Gang
+        case '_TZE200_tzyy0rtq' :  // Moes Star Feather 2 Gang
+        case '_TZE200_hktk6hze' :  // Moes Star Feather 2 Gang / Nova Digital TPZ-2
             buttons = 2
             break
         case '_TZE200_tz32mtza' :
@@ -520,6 +757,9 @@ void setupChildDevices() {
         case '_TZE200_2hf7x9n3' :
         case '_TZE204_atpwqgml' :
         case '_TZE200_bynnczcb' :
+        case '_TZE200_wv9ukqca' :  // Moes Star Feather 3 Gang
+        case '_TZE200_zo0cfekv' :  // Moes Star Feather 3 Gang
+        case '_TZE200_rd8cdssd' :  // Moes Star Feather 3 Gang / Nova Digital TPZ-3
             buttons = 3
             break
         case '_TZE200_k6jhsr0q' :
@@ -531,6 +771,9 @@ void setupChildDevices() {
         case '_TZE204_shkxsgis' :
         case '_TZE200_mua6ucdj' :
         case '_TZE204_aagrxlbd' :
+        case '_TZE200_dq8bu0pt' :  // Moes Star Feather 4 Gang
+        case '_TZE200_9dhenr94' :  // Moes Star Feather 4 Gang
+        case '_TZE200_hmabvy81' :  // Moes Star Feather 4 Gang / Nova Digital TPZ-4
             buttons = 4
             break
         case '_TZE200_9mahtqtg' :
@@ -606,8 +849,21 @@ List<String> switchLightModeConfig() {
         String dpValHex = zigbee.convertToHexString(bl as int, 2)
         cmds = getTuyaCommand('10', DP_TYPE_BOOL, dpValHex)
     }
+    else if (isMoesStarFeatherSwitch()) {
+        // Star Feather uses separate DPs for backlight and indicator - treat independently
+        
+        // Handle backlight mode (DP 0x24)
+        int backlightValue = settings?.backlightMode == 'on' ? 1 : 0
+        if (infoLogging) { log.info "Star Feather - Setting backlight mode: ${settings?.backlightMode}" }
+        cmds += getTuyaCommand('24', DP_TYPE_BOOL, zigbee.convertToHexString(backlightValue, 2))
+        
+        // Handle indicator mode (DP 0x25)  
+        int indicatorValue = settings?.lightIndicatorMode == 'none' ? 0 : settings?.lightIndicatorMode == 'lit when on' ? 1 : 2
+        if (infoLogging) { log.info "Star Feather - Setting indicator mode: ${settings?.lightIndicatorMode}" }
+        cmds += getTuyaCommand('25', DP_TYPE_ENUM, zigbee.convertToHexString(indicatorValue, 2))
+    }
     else {
-        switch (switchLightMode) {
+        switch (settings?.switchLightMode) {
             case 'off':
                 if (infoLogging) { log.info 'Backlight - OFF' }
                 cmds = zigbee.command(0xEF00, 0x0, '00010f04000100')
@@ -633,6 +889,12 @@ List<String> powerOnBehaviorConfig() {
         String dpValHex = zigbee.convertToHexString(rl, 2)
         cmds = getTuyaCommand('0E', DP_TYPE_ENUM, dpValHex)
     }
+    else if (isMoesStarFeatherSwitch()) {
+        int rl = settings?.powerOnBehavior == 'off' ? 0 : settings?.powerOnBehavior == 'on' ? 1 : 2
+        if (debugLogging) { log.debug "Star Feather Power-on behavior: ${rl} (${settings?.powerOnBehavior})" }
+        String dpValHex = zigbee.convertToHexString(rl, 2)
+        cmds = getTuyaCommand('26', DP_TYPE_ENUM, dpValHex)  // DP 0x26 for Star Feather switches
+    }
     else {
         switch (powerOnBehavior) {
             case 'off':
@@ -648,6 +910,33 @@ List<String> powerOnBehaviorConfig() {
                 cmds = zigbee.command(0xEF00, 0x0, '00010e04000102')
                 break
         }
+    }
+    return cmds
+}
+
+List<String> vibrationModeConfig() {
+    List<String> cmds = []
+    if (isMoesStarFeatherSwitch()) {
+        // Extract gear number from "Gear X" format
+        int gearNumber = 1  // default
+        if (settings?.vibrationMode) {
+            String gearStr = settings?.vibrationMode?.replaceAll(/[^0-9]/, '')
+            gearNumber = gearStr ? (gearStr as int) : 1
+        }
+        if (infoLogging) { log.info "Star Feather - Setting vibration mode: ${settings?.vibrationMode}" }
+        String dpValHex = zigbee.convertToHexString(gearNumber, 2)
+        cmds = getTuyaCommand('68', DP_TYPE_ENUM, dpValHex)
+    }
+    return cmds
+}
+
+List<String> inductionModeConfig() {
+    List<String> cmds = []
+    if (isMoesStarFeatherSwitch()) {
+        int inductionValue = settings?.inductionMode == 'on' ? 1 : 0
+        if (infoLogging) { log.info "Star Feather - Setting induction mode: ${settings?.inductionMode}" }
+        String dpValHex = zigbee.convertToHexString(inductionValue, 2)
+        cmds = getTuyaCommand('67', DP_TYPE_BOOL, dpValHex)
     }
     return cmds
 }
