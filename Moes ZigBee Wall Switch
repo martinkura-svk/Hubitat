@@ -28,11 +28,11 @@
  *  revision 1.4.0 - 2025-08-30 - kkossev - added Moes Star Feather Smart Switches SFL02-Z (1,2,3,4 gangs); added Nova Digital Topazio Smart Switches (without the 'scene mode')
  *  revision 1.4.1 - 2025-10-04 - kkossev - added Mercator Ikuu 5-gang switch TS0601 _TZE200_leaqthtqq @giovanni.mausisa
  *  revision 1.4.2 - 2025-10-08 - kkossev/nickjamesdavis -  added Eyzee 6-gang fingerprints _TZE204_jgujzjwh (app 4A) & _TZE200_8eazvzo6 (app 41) with 6-button detection
+ *  revision 1.4.3 - 2025-11-27 - kkossev - Moes Star Feather Smart Switches processing bug fix
 */
 
-static String version() { '1.4.2' }
-static String timeStamp() { '2025/10/08 7:14 AM' }
-
+static String version() { '1.4.3' }
+static String timeStamp() { '2025/11/27 7:43 AM' }
 import hubitat.device.HubAction
 import hubitat.device.Protocol
 import groovy.transform.Field
@@ -248,16 +248,16 @@ def parse(String description) {
         Map descMap = zigbee.parseDescriptionAsMap(description)
         if (descMap?.clusterInt == CLUSTER_TUYA) {
             if (debugLogging) { log.debug "descMap: ${descMap}" }
+            // Check if this is a Star Feather device - if so, skip traditional switch logic
+            if (isMoesStarFeatherSwitch()) {
+                parseMoesStarFeatherSwitch(descMap)  // handle Star Feather specific parsing
+                return [:]
+            }
             if ((descMap?.command in ['00', '01', '02']) && descMap?.data?.size() >= 7) {
                 def switchFunc = (descMap?.data[2])
                 def switchAttr = (descMap?.data[3])
                 def switchState = (descMap?.data[6]) == '01' ? 'on' : 'off'
                 if (switchFunc in ['01', '02', '03', '04', '05', '06'] && switchAttr == '01') {
-                    // Check if this is a Star Feather device - if so, skip traditional switch logic
-                    if (isMoesStarFeatherSwitch()) {
-                        parseMoesStarFeatherSwitch(descMap)  // handle Star Feather specific parsing
-                        return [:]
-                    }
                     // Traditional switch logic for Moes and Trato devices
                     def cd = getChildDevice("${device.id}-${switchFunc}")
                     if (cd == null) {
