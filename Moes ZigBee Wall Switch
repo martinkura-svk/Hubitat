@@ -329,6 +329,10 @@ void parseTratoZemismartKeypad(Map descMap) {
 void parseMoesStarFeatherSwitch(Map descMap) {
     int dataLen = descMap?.data.size()
     if (dataLen <= 5) {
+        if (descMap.command == '0B') {
+            if (debugLogging) { log.debug "Star Feather command acknowledgment received" }
+            return
+        }
         if (descMap.command == '24') {
             syncTuyaDateTime()
             return
@@ -498,7 +502,7 @@ void processStarFeatherDP(final Map descMap, final int dp, final int dp_id, fina
                 sendEvent(name: 'switch', value: strValue, descriptionText: description)
                 if (debugLogging) { log.debug description }
             }
-            updateParentSwitchState()
+            updateParentSwitchState('01', strValue)
             break
         case 0x19 : // (25) state_l2 - Switch 2 state
             strValue = fncmd == 1 ? 'on' : 'off'
@@ -507,7 +511,7 @@ void processStarFeatherDP(final Map descMap, final int dp, final int dp_id, fina
                 description = "Child switch 2 is ${strValue}"
                 cd2.parse([[name: 'switch', value: strValue, descriptionText: description]])
             }
-            updateParentSwitchState()
+            updateParentSwitchState('02', strValue)
             break
         case 0x1A : // (26) state_l3 - Switch 3 state
             strValue = fncmd == 1 ? 'on' : 'off'
@@ -516,7 +520,7 @@ void processStarFeatherDP(final Map descMap, final int dp, final int dp_id, fina
                 description = "Child switch 3 is ${strValue}"
                 cd3.parse([[name: 'switch', value: strValue, descriptionText: description]])
             }
-            updateParentSwitchState()
+            updateParentSwitchState('03', strValue)
             break
         case 0x1B : // (27) state_l4 - Switch 4 state
             strValue = fncmd == 1 ? 'on' : 'off'
@@ -525,7 +529,7 @@ void processStarFeatherDP(final Map descMap, final int dp, final int dp_id, fina
                 description = "Child switch 4 is ${strValue}"
                 cd4.parse([[name: 'switch', value: strValue, descriptionText: description]])
             }
-            updateParentSwitchState()
+            updateParentSwitchState('04', strValue)
             break
         case 0x1E : // (30) countdown_l1 - Timer 1
         case 0x1F : // (31) countdown_l2 - Timer 2  
@@ -579,11 +583,14 @@ void processStarFeatherDP(final Map descMap, final int dp, final int dp_id, fina
     }
 }
 
-void updateParentSwitchState() {
+void updateParentSwitchState(String childId = null, String newState = null) {
     def cdsOn = 0
     // count number of switches on
     getChildDevices().each { child ->
-        if (child.currentValue('switch') == 'on') {
+        String childSwitchId = getChildId(child)
+        // If this is the child being updated, use the new state; otherwise query current state
+        String switchState = (childId != null && childSwitchId == childId) ? newState : child.currentValue('switch')
+        if (switchState == 'on') {
             cdsOn++
         }
     }
