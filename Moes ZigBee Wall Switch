@@ -28,11 +28,11 @@
  *  revision 1.4.0 - 2025-08-30 - kkossev - added Moes Star Feather Smart Switches SFL02-Z (1,2,3,4 gangs); added Nova Digital Topazio Smart Switches (without the 'scene mode')
  *  revision 1.4.1 - 2025-10-04 - kkossev - added Mercator Ikuu 5-gang switch TS0601 _TZE200_leaqthtqq @giovanni.mausisa
  *  revision 1.4.2 - 2025-10-08 - kkossev/nickjamesdavis -  added Eyzee 6-gang fingerprints _TZE204_jgujzjwh (app 4A) & _TZE200_8eazvzo6 (app 41) with 6-button detection
- *  revision 1.4.3 - 2025-11-27 - kkossev - Moes Star Feather Smart Switches processing bug fix
+ *  revision 1.4.3 - 2025-11-29 - kkossev - Moes Star Feather Smart Switches processing bug fixes, including date/time sync
 */
 
 static String version() { '1.4.3' }
-static String timeStamp() { '2025/11/27 7:43 AM' }
+static String timeStamp() { '2025/11/29 11:28 AM' }
 import hubitat.device.HubAction
 import hubitat.device.Protocol
 import groovy.transform.Field
@@ -149,10 +149,10 @@ metadata {
 }
 
 boolean isTratoZemismartKeypad() {
-    return device.getDataValue('manufacturer') in ['_TZE204_rzdkn5rx', '_TZE204_zpvusbtv', '_TZE204_rkbxtclc'/*, '_TZ3000_excgg5kb'*/]  // _TZ3000_excgg5kb for tests only - TOBEDEL!
+    return device.getDataValue('manufacturer') in ['_TZE204_rzdkn5rx', '_TZE204_zpvusbtv', '_TZE204_rkbxtclc']
 }
 
-boolean isMoesStarFeatherSwitch() {
+boolean isMoesStarFeatherSwitch() { //return true
     return device.getDataValue('manufacturer') in ['_TZE200_ydkqbmpt', '_TZE200_z3u99qxt', '_TZE200_uenof8jd', '_TZE200_tzyy0rtq', '_TZE200_hktk6hze', '_TZE200_wv9ukqca', '_TZE200_zo0cfekv', '_TZE200_rd8cdssd', '_TZE200_dq8bu0pt', '_TZE200_9dhenr94', '_TZE200_hmabvy81']
 }
 
@@ -327,13 +327,13 @@ void parseTratoZemismartKeypad(Map descMap) {
 }
 
 void parseMoesStarFeatherSwitch(Map descMap) {
-    if (descMap?.data?.size() < 7) {
-        if (debugLogging) { log.warn "parseMoesStarFeatherSwitch: unprocessed descMap = ${descMap}" }
-        return
-    }
     int dataLen = descMap?.data.size()
     if (dataLen <= 5) {
-        if (debugLogging) { log.warn "unprocessed short Tuya command response: dp_id=${descMap?.data[3]} dp=${descMap?.data[2]} data=${descMap?.data})" }
+        if (descMap.command == '24') {
+            syncTuyaDateTime()
+            return
+        }
+        if (debugLogging) { log.warn "parseMoesStarFeatherSwitch: unprocessed short Tuya command response: dp_id=${descMap?.data[3]} dp=${descMap?.data[2]} data=${descMap?.data}) size=${dataLen}" }
         return
     }
     for (int i = 0; i < (dataLen - 4); ) {
@@ -450,7 +450,7 @@ void processTuyaDP(final Map descMap, final int dp, final int dp_id, final int f
 }
 
 void processStarFeatherDP(final Map descMap, final int dp, final int dp_id, final int fncmd, final int dp_len=0) {
-    if (debugLogging) { log.trace "processStarFeatherDP: dp=${dp} dp_id=${dp_id} fncmd=${fncmd} dp_len=${dp_len}" }
+    if (debugLogging) { log.debug "processStarFeatherDP: dp=${dp} dp_id=${dp_id} fncmd=${fncmd} dp_len=${dp_len}" }
     Map event = [:]
     String description = ''
     String strValue = ''
@@ -474,30 +474,29 @@ void processStarFeatherDP(final Map descMap, final int dp, final int dp_id, fina
         case 0x12 : // (18) mode_l1 - Switch1 mode
             strValue = fncmd == 0 ? 'switch' : 'scene'
             description = "Switch 1 mode is ${strValue}"
-            if (debugLogging) { log.debug description }
             break
         case 0x13 : // (19) mode_l2 - Switch2 mode
             strValue = fncmd == 0 ? 'switch' : 'scene'
             description = "Switch 2 mode is ${strValue}"
-            if (debugLogging) { log.debug description }
             break
         case 0x14 : // (20) mode_l3 - Switch3 mode
             strValue = fncmd == 0 ? 'switch' : 'scene'
             description = "Switch 3 mode is ${strValue}"
-            if (debugLogging) { log.debug description }
             break
         case 0x15 : // (21) mode_l4 - Switch4 mode
             strValue = fncmd == 0 ? 'switch' : 'scene'
             description = "Switch 4 mode is ${strValue}"
-            if (debugLogging) { log.debug description }
             break
         case 0x18 : // (24) state_l1 - Switch 1 state
             strValue = fncmd == 1 ? 'on' : 'off'
             def cd1 = getChildDevice("${device.id}-01")
+
             if (cd1 != null) {
-                cd1.parse([[name: 'switch', value: strValue, descriptionText: "Child switch 1 is $strValue"]])
+                description = "Child switch 1 is ${strValue}"
+                cd1.parse([[name: 'switch', value: strValue, descriptionText: description]])
             } else {
-                sendEvent(name: 'switch', value: strValue, descriptionText: "Switch 1 is $strValue")
+                sendEvent(name: 'switch', value: strValue, descriptionText: description)
+                if (debugLogging) { log.debug description }
             }
             updateParentSwitchState()
             break
@@ -505,7 +504,8 @@ void processStarFeatherDP(final Map descMap, final int dp, final int dp_id, fina
             strValue = fncmd == 1 ? 'on' : 'off'
             def cd2 = getChildDevice("${device.id}-02")
             if (cd2 != null) {
-                cd2.parse([[name: 'switch', value: strValue, descriptionText: "Child switch 2 is $strValue"]])
+                description = "Child switch 2 is ${strValue}"
+                cd2.parse([[name: 'switch', value: strValue, descriptionText: description]])
             }
             updateParentSwitchState()
             break
@@ -513,7 +513,8 @@ void processStarFeatherDP(final Map descMap, final int dp, final int dp_id, fina
             strValue = fncmd == 1 ? 'on' : 'off'
             def cd3 = getChildDevice("${device.id}-03")
             if (cd3 != null) {
-                cd3.parse([[name: 'switch', value: strValue, descriptionText: "Child switch 3 is $strValue"]])
+                description = "Child switch 3 is ${strValue}"
+                cd3.parse([[name: 'switch', value: strValue, descriptionText: description]])
             }
             updateParentSwitchState()
             break
@@ -521,7 +522,8 @@ void processStarFeatherDP(final Map descMap, final int dp, final int dp_id, fina
             strValue = fncmd == 1 ? 'on' : 'off'
             def cd4 = getChildDevice("${device.id}-04")
             if (cd4 != null) {
-                cd4.parse([[name: 'switch', value: strValue, descriptionText: "Child switch 4 is $strValue"]])
+                description = "Child switch 4 is ${strValue}"
+                cd4.parse([[name: 'switch', value: strValue, descriptionText: description]])
             }
             updateParentSwitchState()
             break
@@ -531,7 +533,6 @@ void processStarFeatherDP(final Map descMap, final int dp, final int dp_id, fina
         case 0x21 : // (33) countdown_l4 - Timer 4
             int gang = dp - 0x1E + 1
             description = "Gang #${gang} countdown timer is ${fncmd} seconds"
-            if (debugLogging) { log.debug description }
             break
         case 0x24 : // (36) backlight_mode
             strValue = BacklightSwitchOptions[fncmd]
@@ -564,7 +565,6 @@ void processStarFeatherDP(final Map descMap, final int dp, final int dp_id, fina
         case 0x6C : // (108) momentary_4
             int gang = dp - 0x69 + 1
             description = "Gang #${gang} momentary timer is ${fncmd} seconds"
-            if (debugLogging) { log.debug description }
             break
         default:
             if (debugLogging) { log.warn "<b>NOT PROCESSED</b> Star Feather Tuya cmd: dp=${dp} value=${fncmd} descMap.data = ${descMap?.data}" }
@@ -575,7 +575,7 @@ void processStarFeatherDP(final Map descMap, final int dp, final int dp_id, fina
         if (infoLogging) { log.info description }
     }
     else if (description != '') {
-        if (infoLogging) { log.info description }
+        if (debugLogging) { log.debug description }
     }
 }
 
@@ -589,8 +589,11 @@ void updateParentSwitchState() {
     }
     String parentState = cdsOn > 0 ? 'on' : 'off'
     if (device.currentValue('switch') != parentState) {
-        if (debugLogging) { log.debug "Parent Switch ${parentState.toUpperCase()}" }
+        if (debugLogging) { log.debug "Parent Switch turned ${parentState.toUpperCase()}  (number of child switches on = ${cdsOn})" }
         sendEvent(name: 'switch', value: parentState)
+    }
+    else {
+        if (debugLogging) { log.debug "Parent Switch remains ${parentState.toUpperCase()} (number of child switches on = ${cdsOn})" }
     }
 }
 
