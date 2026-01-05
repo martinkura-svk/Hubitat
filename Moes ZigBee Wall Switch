@@ -29,10 +29,12 @@
  *  revision 1.4.1 - 2025-10-04 - kkossev - added Mercator Ikuu 5-gang switch TS0601 _TZE200_leaqthtqq @giovanni.mausisa
  *  revision 1.4.2 - 2025-10-08 - kkossev/nickjamesdavis -  added Eyzee 6-gang fingerprints _TZE204_jgujzjwh (app 4A) & _TZE200_8eazvzo6 (app 41) with 6-button detection
  *  revision 1.4.3 - 2025-11-29 - kkossev - Moes Star Feather Smart Switches processing bug fixes, including date/time sync
+ *  revision 1.4.4 - 2026-01-05 - kkossev - added TS0601 _TZE284_ms97nkyy
+ *
 */
 
-static String version() { '1.4.3' }
-static String timeStamp() { '2025/11/29 11:28 AM' }
+static String version() { '1.4.4' }
+static String timeStamp() { '2026/01/05 9:13 PM' }
 import hubitat.device.HubAction
 import hubitat.device.Protocol
 import groovy.transform.Field
@@ -100,6 +102,7 @@ metadata {
         //
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_jgujzjwh', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'4A', deviceJoinName: 'Eyzee 6-gang switch'                  // https://community.hubitat.com/t/re-release-moes-zigbee-wall-switch-1-2-3-gang-tuya-ts0601-switches/138120/12?u=kkossev
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_8eazvzo6', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'41', deviceJoinName: 'Eyzee 6-gang switch'                  // https://community.hubitat.com/t/re-release-moes-zigbee-wall-switch-1-2-3-gang-tuya-ts0601-switches/138120/12?u=kkossev
+        fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE284_ms97nkyy", endpointId:'01', inClusters:"0000,0004,0005,EF00,0000,ED00", outClusters:"0019,000A",  controllerType: "ZGB", deviceJoinName: 'Brasil 12-gang switch'
     }
     
     attribute 'switchLightMode', 'enum', ['off', 'on', 'position']
@@ -140,6 +143,9 @@ metadata {
                 input(name: 'vibrationMode', type: 'enum', title: ("<b>Vibration Mode</b>"), description: ("Select vibration intensity for tactile feedback (default: Gear 1)"), options: ['Gear 0', 'Gear 1', 'Gear 2', 'Gear 3', 'Gear 4', 'Gear 5'], defaultValue: 'Gear 1')
                 input(name: 'inductionMode', type: 'enum', title: ("<b>Induction Mode</b>"), description: ("Enable/disable induction sensing (default: off)"), options: ['off', 'on'], defaultValue: 'off')
             }
+            else if (is12GangSwitch()) {
+                input(name: 'backlightLevel', type: 'number', title: ("<b>Backlight Brightness</b>"), description: ("Set backlight brightness 0-99% (default: 50)"), defaultValue: 50, range: '0..99')
+            }
             else {
                 input(name: 'switchLightMode', type: 'enum', title: ("<b>Switch Backlight Mode</b>"), description: ("Select type of backlight indicator (default: Position)"), options: ['off', 'on', 'position'], defaultValue: 'position')
             }
@@ -154,6 +160,10 @@ boolean isTratoZemismartKeypad() {
 
 boolean isMoesStarFeatherSwitch() { //return true
     return device.getDataValue('manufacturer') in ['_TZE200_ydkqbmpt', '_TZE200_z3u99qxt', '_TZE200_uenof8jd', '_TZE200_tzyy0rtq', '_TZE200_hktk6hze', '_TZE200_wv9ukqca', '_TZE200_zo0cfekv', '_TZE200_rd8cdssd', '_TZE200_dq8bu0pt', '_TZE200_9dhenr94', '_TZE200_hmabvy81']
+}
+
+boolean is12GangSwitch() {
+    return device.getDataValue('manufacturer') == '_TZE284_ms97nkyy'
 }
 
 void initializeVars() {
@@ -226,6 +236,11 @@ def updated() {
         cmds += getTuyaCommand('0E', DP_TYPE_ENUM, zigbee.convertToHexString(key as int, 2))
         
     }
+    if (is12GangSwitch()) {
+        // 12-gang switch backlight brightness 0-99%
+        int brightness = settings?.backlightLevel != null ? settings.backlightLevel as int : 50
+        cmds += getTuyaCommand('65', DP_TYPE_VALUE, zigbee.convertToHexString(brightness, 8))
+    }
     if (infoLogging) { log.info 'Updated...' }
     sendZigbeeCommands(cmds)
 }
@@ -251,6 +266,10 @@ def parse(String description) {
             // Check if this is a Star Feather device - if so, skip traditional switch logic
             if (isMoesStarFeatherSwitch()) {
                 parseMoesStarFeatherSwitch(descMap)  // handle Star Feather specific parsing
+                return [:]
+            }
+            if (is12GangSwitch()) {
+                parse12GangSwitch(descMap)  // handle 12-gang switch specific parsing
                 return [:]
             }
             if ((descMap?.command in ['00', '01', '02']) && descMap?.data?.size() >= 7) {
@@ -346,6 +365,35 @@ void parseMoesStarFeatherSwitch(Map descMap) {
         int fncmd_len = zigbee.convertHexToInt(descMap?.data[5 + i])
         int fncmd = getTuyaAttributeValue(descMap?.data, i)            //
         processStarFeatherDP(descMap, dp, dp_id, fncmd)
+        i = i + fncmd_len + 4
+    }
+}
+
+void parse12GangSwitch(Map descMap) {
+    if (descMap?.data == null) {
+        //if (debugLogging) { log.warn "parse12GangSwitch: descMap.data is null = ${descMap}" }
+        if (debugLogging) { log.debug "parse12GangSwitch: check-in" }
+        return
+    }
+    int dataLen = descMap.data.size()
+    if (dataLen <= 5) {
+        if (descMap.command == '0B') {
+            if (debugLogging) { log.debug "12-gang switch command acknowledgment received" }
+            return
+        }
+        if (descMap.command == '24') {
+            syncTuyaDateTime()
+            return
+        }
+        if (debugLogging) { log.warn "parse12GangSwitch: unprocessed short Tuya command response: dp_id=${descMap?.data[3]} dp=${descMap?.data[2]} data=${descMap?.data}) size=${dataLen}" }
+        return
+    }
+    for (int i = 0; i < (dataLen - 4); ) {
+        int dp = zigbee.convertHexToInt(descMap?.data[2 + i])          // "dp" field describes the action/message of a command frame
+        int dp_id = zigbee.convertHexToInt(descMap?.data[3 + i])       // "dp_identifier" is device dependant
+        int fncmd_len = zigbee.convertHexToInt(descMap?.data[5 + i])
+        int fncmd = getTuyaAttributeValue(descMap?.data, i)            //
+        process12GangDP(descMap, dp, dp_id, fncmd)
         i = i + fncmd_len + 4
     }
 }
@@ -583,6 +631,100 @@ void processStarFeatherDP(final Map descMap, final int dp, final int dp_id, fina
     }
 }
 
+void process12GangDP(final Map descMap, final int dp, final int dp_id, final int fncmd, final int dp_len=0) {
+    if (debugLogging) { log.debug "process12GangDP: dp=${dp} dp_id=${dp_id} fncmd=${fncmd} dp_len=${dp_len}" }
+    Map event = [:]
+    String description = ''
+    String strValue = ''
+    
+    switch (dp) {
+        case 0x18 : // (24) state_l1 - Physical Switch 1
+        case 0x19 : // (25) state_l2 - Physical Switch 2
+        case 0x1A : // (26) state_l3 - Physical Switch 3
+        case 0x1B : // (27) state_l4 - Physical Switch 4
+        case 0x1C : // (28) state_l5 - Physical Switch 5
+        case 0x1D : // (29) state_l6 - Physical Switch 6
+            int switchNum = dp - 0x18 + 1
+            strValue = fncmd == 1 ? 'on' : 'off'
+            String childId = String.format('%02d', switchNum)
+            def cd = getChildDevice("${device.id}-${childId}")
+            if (cd != null) {
+                description = "Child switch ${switchNum} is ${strValue}"
+                cd.parse([[name: 'switch', value: strValue, descriptionText: description]])
+                if (debugLogging) { log.debug description }
+            }
+            updateParentSwitchState(childId, strValue)
+            break
+
+        // example : catchall: 0104 EF00 01 01 0040 00 CA52 01 00 0000 02 01 00D60704000100
+        case 0x07 : // (7) action_1 - Virtual Scene Switch 7
+        case 0x08 : // (8) action_2 - Virtual Scene Switch 8
+        case 0x09 : // (9) action_3 - Virtual Scene Switch 9
+        case 0x0A : // (10) action_4 - Virtual Scene Switch 10
+        case 0x0B : // (11) action_5 - Virtual Scene Switch 11
+        case 0x0C : // (12) action_6 - Virtual Scene Switch 12
+            int sceneNum = dp - 0x07 + 7  // Map to switches 7-12
+            String childId = String.format('%02d', sceneNum)
+            def cd = getChildDevice("${device.id}-${childId}")
+            if (cd != null) {
+                if (fncmd == 0) {
+                    // Physical press: toggle the state
+                    // example : catchall: 0104 EF00 01 01 0040 00 CA52 01 00 0000 02 01 00D60704000100 
+                    String currentState = cd.currentValue('switch') ?: 'off'
+                    strValue = currentState == 'on' ? 'off' : 'on'
+                    description = "Virtual scene switch ${sceneNum} toggled to ${strValue}"
+                } else if (fncmd == 3) {
+                    // Command ON (dpCmd 03)
+                    strValue = 'on'
+                    description = "Virtual scene switch ${sceneNum} turned on"
+                } else if (fncmd == 2) {
+                    // Command OFF (dpCmd 02)
+                    strValue = 'off'
+                    description = "Virtual scene switch ${sceneNum} turned off"
+                } else {
+                    if (debugLogging) { log.debug "Virtual scene switch ${sceneNum}: unexpected fncmd=${fncmd}" }
+                    break
+                }
+                cd.parse([[name: 'switch', value: strValue, descriptionText: description]])
+                if (debugLogging) { log.debug description }
+            }
+            updateParentSwitchState(childId, strValue)
+            break
+        case 0x65 : // (101) backlight_brightness (0-99%)
+            strValue = fncmd.toString()
+            description = "Backlight brightness is ${strValue}%"
+            event = createEvent(name: 'backlightLevel', value: strValue, descriptionText: description)
+            break
+        case 0x12 : // (18) unknown_dp_18
+        case 0x13 : // (19) unknown_dp_19
+        case 0x14 : // (20) unknown_dp_20
+        case 0x15 : // (21) unknown_dp_21
+        case 0x16 : // (22) unknown_dp_22
+        case 0x17 : // (23) unknown_dp_23
+        case 0x24 : // (36) unknown_dp_36
+        case 0x26 : // (38) unknown_dp_38
+        case 0x27 : // (39) unknown_dp_39
+        case 0x28 : // (40) unknown_dp_40
+        case 0x29 : // (41) unknown_dp_41
+        case 0x2A : // (42) unknown_dp_42
+        case 0x2B : // (43) unknown_dp_43
+        case 0x2C : // (44) unknown_dp_44
+            if (debugLogging) { log.debug "unknown dp ${dp}" }
+            break
+        default:
+            if (debugLogging) { log.warn "<b>NOT PROCESSED</b> 12-gang Tuya cmd: dp=${dp} value=${fncmd} descMap.data = ${descMap?.data}" }
+            break
+    }
+    
+    if (event != [:]) {
+        sendEvent(event)
+        if (infoLogging) { log.info description }
+    }
+    else if (description != '') {
+        if (debugLogging) { log.debug description }
+    }
+}
+
 void updateParentSwitchState(String childId = null, String newState = null) {
     def cdsOn = 0
     // count number of switches on
@@ -671,6 +813,12 @@ def lastCheckin() {    // send event for heartbeat
 
 def off() {
     if (infoLogging) { log.info 'Turn all switches OFF' }
+    if (is12GangSwitch()) {
+        // 12-gang switch: Turn off first 6 physical relays (DPs 24-29 / 0x18-0x1D) in a single command
+        return [
+            "he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {0001180100010019010001001A010001001B010001001C010001001D01000100}", 'delay 200',
+        ]
+    }
     return  [
         "he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {0001010100010002010001000301000100}", 'delay 200',
     ]
@@ -678,6 +826,12 @@ def off() {
 
 def on() {
     if (infoLogging) { log.info 'Turn all switches ON' }
+    if (is12GangSwitch()) {
+        // 12-gang switch: Turn on first 6 physical relays (DPs 24-29 / 0x18-0x1D) in a single command
+        return [
+            "he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {0001180100010119010001011A010001011B010001011C010001011D01000101}", 'delay 200',
+        ]
+    }
     return  [
         "he cmd 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00 {0001010100010102010001010301000101}", 'delay 200',
     ]
@@ -685,7 +839,7 @@ def on() {
 
 def refresh() {
     if (infoLogging) { log.info 'Refreshing...' }
-    if (isTratoZemismartKeypad()) {
+    if (isTratoZemismartKeypad() || is12GangSwitch()) {
         return [queryAllTuyaDP()]
     }
     return  [
@@ -708,6 +862,25 @@ void componentOn(childDevice) {
         String dpHex = zigbee.convertToHexString(dpValue, 2)
         List<String> cmds = getTuyaCommand(dpHex, DP_TYPE_BOOL, '01')
         sendZigbeeCommands(cmds)
+    } else if (is12GangSwitch()) {
+        // 12-gang switch: Switches 1-6 use DPs 24-29 (0x18-0x1D), Switches 7-12 use DPs 7-12 (0x07-0x0C)
+        String childId = getChildId(childDevice)
+        int switchNum = childId as int
+        int dpValue
+        String dpType
+        String dpCmd
+        if (switchNum <= 6) {
+            dpValue = 0x18 + switchNum - 1  // Physical relays: 01->0x18, 02->0x19, ... 06->0x1D
+            dpType = DP_TYPE_BOOL
+            dpCmd = '01'
+        } else {
+            dpValue = 0x07 + switchNum - 7  // Virtual scenes: 07->0x07, 08->0x08, ... 12->0x0C
+            dpType = DP_TYPE_ENUM
+            dpCmd = '03'  // Use '03' for virtual switch ON command
+        }
+        String dpHex = zigbee.convertToHexString(dpValue, 2)
+        List<String> cmds = getTuyaCommand(dpHex, dpType, dpCmd)
+        sendZigbeeCommands(cmds)
     } else {
         // Original method for other switches
         String fullDataOn = '0001' + getChildId(childDevice) + '01000101'
@@ -726,6 +899,25 @@ void componentOff(childDevice) {
         int dpValue = 0x18 + (childId as int) - 1  // Convert to hex: 01->0x18, 02->0x19, etc.
         String dpHex = zigbee.convertToHexString(dpValue, 2)
         List<String> cmds = getTuyaCommand(dpHex, DP_TYPE_BOOL, '00')
+        sendZigbeeCommands(cmds)
+    } else if (is12GangSwitch()) {
+        // 12-gang switch: Switches 1-6 use DPs 24-29 (0x18-0x1D), Switches 7-12 use DPs 7-12 (0x07-0x0C)
+        String childId = getChildId(childDevice)
+        int switchNum = childId as int
+        int dpValue
+        String dpType
+        String dpCmd
+        if (switchNum <= 6) {
+            dpValue = 0x18 + switchNum - 1  // Physical relays: 01->0x18, 02->0x19, ... 06->0x1D
+            dpType = DP_TYPE_BOOL
+            dpCmd = '00'
+        } else {
+            dpValue = 0x07 + switchNum - 7  // Virtual scenes: 07->0x07, 08->0x08, ... 12->0x0C
+            dpType = DP_TYPE_ENUM
+            dpCmd = '02'  // Use '02' for virtual switch OFF command
+        }
+        String dpHex = zigbee.convertToHexString(dpValue, 2)
+        List<String> cmds = getTuyaCommand(dpHex, dpType, dpCmd)
         sendZigbeeCommands(cmds)
     } else {
         // Original method for other switches
@@ -815,7 +1007,10 @@ void setupChildDevices() {
         case '_TZE204_dvosyycn' :
             buttons = 6              // limited to 6 relays only, actually has 8 relays and 8 inputs
             break
-        case '_TZE204_dqolcpcp' :
+        case '_TZE204_dqolcpcp' :    // 6 relays and 6 scene switches (virtual) https://github.com/Koenkk/zigbee-herdsman-converters/blob/e9132fc65cc0bcbef60a5793976ba192fcc845ac/src/devices/qa.ts#L239 
+            buttons = 12
+            break
+        case '_TZE284_ms97nkyy' :    // QA 12-gang switch - 6 physical relays (DPs 24-29) + 6 virtual scene switches (DPs 7-12)
             buttons = 12
             break
         case '_TZE200_vhy3iakz' :
@@ -838,7 +1033,7 @@ void createChildDevices(int buttons) {
     /* groovylint-disable-next-line UnnecessaryElseStatement */
     else {
         for (i in 1..buttons) {
-            def childId = "${device.id}-0${i}"
+            def childId = "${device.id}-${String.format('%02d', i)}"
             def existingChild = getChildDevices()?.find { it.deviceNetworkId == childId }
 
             if (existingChild) {
@@ -846,7 +1041,7 @@ void createChildDevices(int buttons) {
             }
             else {
                 if (infoLogging) { log.info "Creating device ${childId}" }
-                addChildDevice('hubitat', 'Generic Component Switch', childId, [isComponent: true, name: "Switch EP0${i}", label: "${device.displayName} EP0${i}"])
+                addChildDevice('hubitat', 'Generic Component Switch', childId, [isComponent: true, name: "Switch EP${String.format('%02d', i)}", label: "${device.displayName} EP${String.format('%02d', i)}"])
             }
         }
     }
