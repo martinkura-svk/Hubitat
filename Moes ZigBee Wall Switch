@@ -30,11 +30,12 @@
  *  revision 1.4.2 - 2025-10-08 - kkossev/nickjamesdavis -  added Eyzee 6-gang fingerprints _TZE204_jgujzjwh (app 4A) & _TZE200_8eazvzo6 (app 41) with 6-button detection
  *  revision 1.4.3 - 2025-11-29 - kkossev - Moes Star Feather Smart Switches processing bug fixes, including date/time sync
  *  revision 1.4.4 - 2026-01-05 - kkossev - added TS0601 _TZE284_ms97nkyy
+ *  revision 1.4.5 - 2026-02-04 - kkossev - adding TS0601 _TZE204_nvxorhcj @bhnoronha
  *
 */
 
-static String version() { '1.4.4' }
-static String timeStamp() { '2026/01/05 9:13 PM' }
+static String version() { '1.4.5' }
+static String timeStamp() { '2026/02/04 7:00 AM' }
 import hubitat.device.HubAction
 import hubitat.device.Protocol
 import groovy.transform.Field
@@ -99,6 +100,7 @@ metadata {
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_9dhenr94', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Moes Star Feather Smart Switch 4 Gang'
         // Nova Digital Topazio Smart Switches  
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_hmabvy81', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'42', deviceJoinName: 'Nova Digital Topazio Smart Switch 4 Gang'
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_nvxorhcj', endpointId:'01', inClusters:'0004,0005,EF00,0000', outClusters:'0019,000A', application:'4A', deviceJoinName: 'Nova Digital Topazio Smart Switch 8 Gang' // https://community.hubitat.com/t/re-release-moes-zigbee-wall-switch-1-2-3-gang-tuya-ts0601-switches/138120/28?u=kkossev
         //
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE204_jgujzjwh', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'4A', deviceJoinName: 'Eyzee 6-gang switch'                  // https://community.hubitat.com/t/re-release-moes-zigbee-wall-switch-1-2-3-gang-tuya-ts0601-switches/138120/12?u=kkossev
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_8eazvzo6', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'41', deviceJoinName: 'Eyzee 6-gang switch'                  // https://community.hubitat.com/t/re-release-moes-zigbee-wall-switch-1-2-3-gang-tuya-ts0601-switches/138120/12?u=kkossev
@@ -164,6 +166,10 @@ boolean isMoesStarFeatherSwitch() { //return true
 
 boolean is12GangSwitch() {
     return device.getDataValue('manufacturer') == '_TZE284_ms97nkyy'
+}
+
+boolean is8GangNvxorhcj() {
+    return device.getDataValue('manufacturer') == '_TZE204_nvxorhcj'
 }
 
 void initializeVars() {
@@ -276,19 +282,25 @@ def parse(String description) {
                 def switchFunc = (descMap?.data[2])
                 def switchAttr = (descMap?.data[3])
                 def switchState = (descMap?.data[6]) == '01' ? 'on' : 'off'
-                if (switchFunc in ['01', '02', '03', '04', '05', '06'] && switchAttr == '01') {
+                // _TZE204_nvxorhcj (8-gang) uses DP 0x65/0x66 for gangs 7/8
+                String childId = switchFunc
+                boolean is8GangSwitchDp = is8GangNvxorhcj() && (switchFunc in ['65', '66'])
+                if (is8GangSwitchDp) {
+                    childId = switchFunc == '65' ? '07' : '08'
+                }
+                if ((switchFunc in ['01', '02', '03', '04', '05', '06'] || is8GangSwitchDp) && switchAttr == '01') {
                     // Traditional switch logic for Moes and Trato devices
-                    def cd = getChildDevice("${device.id}-${switchFunc}")
+                    def cd = getChildDevice("${device.id}-${childId}")
                     if (cd == null) {
                         return createEvent(name: 'switch', value: switchState)
                     }
                     if (descMap?.command == '00') {
                         // switch toggled
-                        cd.parse([[name: 'switch', value:switchState, descriptionText: "Child switch ${switchFunc} turned $switchState"]])
+                        cd.parse([[name: 'switch', value:switchState, descriptionText: "Child switch ${childId} turned $switchState"]])
                     }
                     else if (descMap?.command in ['01', '02']) {
                         // report switch status
-                        cd.parse([[name: 'switch', value:switchState, descriptionText: "Child switch ${switchFunc} is $switchState"]])
+                        cd.parse([[name: 'switch', value:switchState, descriptionText: "Child switch ${childId} is $switchState"]])
                     }
                     if (switchState == 'on') {
                         if (debugLogging) { log.debug 'Parent Switch ON' }
@@ -298,7 +310,7 @@ def parse(String description) {
                         def cdsOn = 0
                         // cound number of switches on
                         getChildDevices().each { child ->
-                            if (getChildId(child) != switchFunc && child.currentValue('switch') == 'on') {
+                            if (getChildId(child) != childId && child.currentValue('switch') == 'on') {
                                 cdsOn++
                             }
                         }
@@ -813,6 +825,13 @@ def lastCheckin() {    // send event for heartbeat
 
 def off() {
     if (infoLogging) { log.info 'Turn all switches OFF' }
+    if (is8GangNvxorhcj()) {
+        List<String> cmds = []
+        ['01', '02', '03', '04', '05', '06', '65', '66'].each { String dpHex ->
+            cmds += getTuyaCommand(dpHex, DP_TYPE_BOOL, '00')
+        }
+        return cmds
+    }
     if (is12GangSwitch()) {
         // 12-gang switch: Turn off first 6 physical relays (DPs 24-29 / 0x18-0x1D) in a single command
         return [
@@ -826,6 +845,13 @@ def off() {
 
 def on() {
     if (infoLogging) { log.info 'Turn all switches ON' }
+    if (is8GangNvxorhcj()) {
+        List<String> cmds = []
+        ['01', '02', '03', '04', '05', '06', '65', '66'].each { String dpHex ->
+            cmds += getTuyaCommand(dpHex, DP_TYPE_BOOL, '01')
+        }
+        return cmds
+    }
     if (is12GangSwitch()) {
         // 12-gang switch: Turn on first 6 physical relays (DPs 24-29 / 0x18-0x1D) in a single command
         return [
@@ -839,7 +865,7 @@ def on() {
 
 def refresh() {
     if (infoLogging) { log.info 'Refreshing...' }
-    if (isTratoZemismartKeypad() || is12GangSwitch()) {
+    if (isTratoZemismartKeypad() || is12GangSwitch() || is8GangNvxorhcj()) {
         return [queryAllTuyaDP()]
     }
     return  [
@@ -860,6 +886,12 @@ void componentOn(childDevice) {
         String childId = getChildId(childDevice)
         int dpValue = 0x18 + (childId as int) - 1  // Convert to hex: 01->0x18, 02->0x19, etc.
         String dpHex = zigbee.convertToHexString(dpValue, 2)
+        List<String> cmds = getTuyaCommand(dpHex, DP_TYPE_BOOL, '01')
+        sendZigbeeCommands(cmds)
+    } else if (is8GangNvxorhcj()) {
+        // 8-gang special mapping: gangs 7/8 are DP 0x65/0x66
+        String childId = getChildId(childDevice)
+        String dpHex = (childId as int) <= 6 ? childId : (childId == '07' ? '65' : '66')
         List<String> cmds = getTuyaCommand(dpHex, DP_TYPE_BOOL, '01')
         sendZigbeeCommands(cmds)
     } else if (is12GangSwitch()) {
@@ -898,6 +930,12 @@ void componentOff(childDevice) {
         String childId = getChildId(childDevice)
         int dpValue = 0x18 + (childId as int) - 1  // Convert to hex: 01->0x18, 02->0x19, etc.
         String dpHex = zigbee.convertToHexString(dpValue, 2)
+        List<String> cmds = getTuyaCommand(dpHex, DP_TYPE_BOOL, '00')
+        sendZigbeeCommands(cmds)
+    } else if (is8GangNvxorhcj()) {
+        // 8-gang special mapping: gangs 7/8 are DP 0x65/0x66
+        String childId = getChildId(childDevice)
+        String dpHex = (childId as int) <= 6 ? childId : (childId == '07' ? '65' : '66')
         List<String> cmds = getTuyaCommand(dpHex, DP_TYPE_BOOL, '00')
         sendZigbeeCommands(cmds)
     } else if (is12GangSwitch()) {
@@ -1006,6 +1044,9 @@ void setupChildDevices() {
             break
         case '_TZE204_dvosyycn' :
             buttons = 6              // limited to 6 relays only, actually has 8 relays and 8 inputs
+            break
+        case '_TZE204_nvxorhcj' :    // 8 Nova Digital Topazio Smart Switch 8 Gang
+            buttons = 8
             break
         case '_TZE204_dqolcpcp' :    // 6 relays and 6 scene switches (virtual) https://github.com/Koenkk/zigbee-herdsman-converters/blob/e9132fc65cc0bcbef60a5793976ba192fcc845ac/src/devices/qa.ts#L239 
             buttons = 12
