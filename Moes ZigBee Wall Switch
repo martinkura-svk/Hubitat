@@ -33,12 +33,13 @@
  *  revision 1.4.5 - 2026-02-04 - kkossev - adding TS0601 _TZE204_nvxorhcj @bhnoronha
  *  revision 1.5.0 - 2026-04-15 - kkossev - fixed Moes Star Feather on()/off() commands; added all known Moes Star Feather Zigbee Wall Switches (1-4 gangs) with support for all their features, including _TZE200_z3u99qxt @smc.cross 
  *  revision 1.5.1 - 2026-06-03 - kkossev - added Quero automatização 1-gang _TZE284_nzns7udm, 2-gang _TZE284_1aqlsquf, 3-gang _TZE284_pgxndxp4; renamed _TZE284_ms97nkyy to 'Quero automatização 6-gang switch'; each Quero N-gang device creates N physical + N virtual child switches;
- * 
+ *  revision 1.5.2 - 2026-06-21 - Nathanael-Shermett - added setPreference command
+ *
  *
 */
 
-static String version() { '1.5.1' }
-static String timeStamp() { '2026/06/03 10:04 PM' }
+static String version() { '1.5.2' }
+static String timeStamp() { '2026/06/21 04:09 PM' }
 import hubitat.device.HubAction
 import hubitat.device.Protocol
 import groovy.transform.Field
@@ -51,6 +52,8 @@ metadata {
         capability 'Actuator'
         capability 'Refresh'
         capability 'Switch'
+
+        command 'setPreference', [[name:'preference*', type:'STRING', description:'Preference name, e.g. lightIndicatorMode'], [name:'value*', type:'STRING', description:'New value, e.g. none']]
 
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_amp6tsvy', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'42', deviceJoinName: 'Moes 1-Gang Switch / ZTS-EU1'
         fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE200_oisqyl4o', endpointId:'01', inClusters:'0000,0004,0005,EF00', outClusters:'0019,000A', application:'42', deviceJoinName: 'No Neutral Push Button Light Switch 1 Gang'
@@ -330,6 +333,22 @@ def updated() {
     }
     if (infoLogging) { log.info 'Updated...' }
     sendZigbeeCommands(cmds)
+}
+
+def setPreference(String preference, String value) {
+    String key = preference?.trim()
+    String val = value?.trim() ?: ''
+    if (!key) {
+        log.warn 'setPreference: missing preference name'
+        return
+    }
+
+    String type = val.isNumber() ? 'number' : (val.toLowerCase() in ['true', 'false'] ? 'bool' : 'enum')
+    if (infoLogging) { log.info "setPreference: ${key} = ${val} (${type})" }
+
+    device.updateSetting(key, [value: val, type: type])
+    settings[key] = val
+    updated()
 }
 
 
