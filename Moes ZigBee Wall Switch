@@ -40,7 +40,7 @@
 */
 
 static String version() { '1.5.3' }
-static String timeStamp() { '2026/09/30 07:38 AM' }
+static String timeStamp() { '2026/09/30 08:57 AM' }
 import hubitat.device.HubAction
 import hubitat.device.Protocol
 import groovy.transform.Field
@@ -128,6 +128,14 @@ metadata {
     attribute 'screenLabel2', 'string'
     attribute 'screenLabel3', 'string'
     attribute 'screenLabel4', 'string'
+    attribute 'screenMasterSwitch', 'enum', ['off', 'on']
+    attribute 'screenIndicatorMode', 'enum', ['off', 'on_off_status', 'switch_position']
+    attribute 'delayColor', 'enum', ['Red', 'Blue', 'Green', 'White', 'Yellow', 'Magenta', 'Cyan', 'WarmWhite', 'WarmYellow']
+    attribute 'radarConfig', 'enum', ['none', '10s', '20s', '30s', '45s', '60s']
+    attribute 'powerOnBehavior_l1', 'enum', ['off', 'on', 'last state']
+    attribute 'powerOnBehavior_l2', 'enum', ['off', 'on', 'last state']
+    attribute 'powerOnBehavior_l3', 'enum', ['off', 'on', 'last state']
+    attribute 'powerOnBehavior_l4', 'enum', ['off', 'on', 'last state']
     attribute 'backlightLevel', 'number'
     attribute 'childLock', 'enum', ['off', 'on']
     attribute 'backlightMode', 'enum', ['off', 'on']
@@ -154,7 +162,16 @@ metadata {
         input(name: 'debugLogging', type: 'bool', title: ("<b>Enable debug logging</b>"), description: '', defaultValue: true)
         if (device) {
             if (isZemismartScreenSwitch()) {
+                input(name: 'screenIndicatorMode', type: 'enum', title: 'Indicator mode', description: 'Unset leaves the device setting unchanged.', options: [off:'Off', on_off_status:'On/off status', switch_position:'Switch position'], required: false)
+                input(name: 'backlightMode', type: 'enum', title: 'Backlight', description: 'Unset leaves the device setting unchanged.', options: ['off', 'on'], required: false)
+                input(name: 'backlightLevel', type: 'number', title: 'Backlight brightness (%)', description: 'Whole number 0-100. Unset leaves the device setting unchanged.', range: '0..100', required: false)
+                input(name: 'childLlock', type: 'enum', title: 'Child lock', description: 'Unset leaves the device setting unchanged.', options: ['off', 'on'], required: false)
+                input(name: 'onColor', type: 'enum', title: 'Color when on', description: 'Unset leaves the device setting unchanged.', options: ['Red', 'Blue', 'Green', 'White', 'Yellow', 'Magenta', 'Cyan', 'WarmWhite', 'WarmYellow'], required: false)
+                input(name: 'offColor', type: 'enum', title: 'Color when off', description: 'Unset leaves the device setting unchanged.', options: ['Red', 'Blue', 'Green', 'White', 'Yellow', 'Magenta', 'Cyan', 'WarmWhite', 'WarmYellow'], required: false)
+                input(name: 'delayColor', type: 'enum', title: 'Color while delayed', description: 'Unset leaves the device setting unchanged. Does not start a timer.', options: ['Red', 'Blue', 'Green', 'White', 'Yellow', 'Magenta', 'Cyan', 'WarmWhite', 'WarmYellow'], required: false)
+                input(name: 'radarConfig', type: 'enum', title: 'Radar configuration', description: 'Unset leaves the device setting unchanged.', options: ['none', '10s', '20s', '30s', '45s', '60s'], required: false)
                 for (int gang = 1; gang <= 4; gang++) {
+                    input(name: "powerOnBehavior_l${gang}", type: 'enum', title: "Switch ${gang} power-on behavior", description: 'Unset leaves the device setting unchanged.', options: ['off', 'on', 'last state'], required: false)
                     input(name: "screenLabel${gang}", type: 'text', title: "Display label ${gang}", description: 'Maximum 12 characters (some symbols count as two). Save Preferences to apply; removing a previously set label clears it.', defaultValue: '', required: false)
                 }
             }
@@ -261,6 +278,7 @@ boolean is8GangNvxorhcj() {
 
 void initializeVars() {
     if (isZemismartScreenSwitch()) {
+        // Optional screen configuration stays unset until selected; never impose device defaults.
         for (int gang = 1; gang <= 4; gang++) {
             if (settings["screenLabel${gang}"] == null) { device.updateSetting("screenLabel${gang}", [type:'text', value:'']) }
         }
@@ -331,7 +349,7 @@ def updated() {
     if (debugLogging) { log.debug 'Parent updated' }
     cmds = switchLightModeConfig() + powerOnBehaviorConfig() /*+ refresh()*/
     if (isZemismartScreenSwitch()) {
-        cmds += screenLabelConfig()
+        cmds += zemismartScreenConfig() + screenLabelConfig()
     }
     if (isMoesStarFeatherSwitch()) {
         cmds += vibrationModeConfig() + inductionModeConfig() + switchModeConfig() + countdownConfig() + momentaryConfig()
@@ -370,14 +388,20 @@ def setPreference(String preference, String value) {
     }
 
     String type = val.isNumber() ? 'number' : (val.toLowerCase() in ['true', 'false'] ? 'bool' : 'enum')
-    if (isZemismartScreenSwitch() && key ==~ /screenLabel[1-4]/) {
-        type = 'text'
-        val = value ?: '' // Preserve numeric-looking text and surrounding spaces.
+    if (isZemismartScreenSwitch()) {
+        if (key ==~ /screenLabel[1-4]/) {
+            type = 'text'
+            val = value ?: '' // Preserve numeric-looking text and surrounding spaces.
+        } else if (key in ['debugLogging', 'infoLogging']) {
+            type = 'bool'
+            val = val.toLowerCase()
+        } else { type = key == 'backlightLevel' ? 'number' : 'enum' }
+        if (!validScreenPreference(key, val)) { return }
     }
     if (infoLogging) { log.info "setPreference: ${key} = ${val} (${type})" }
 
     device.updateSetting(key, [value: val, type: type])
-    settings[key] = val
+    settings[key] = isZemismartScreenSwitch() && type == 'bool' ? val == 'true' : val
     updated()
 }
 
@@ -511,8 +535,9 @@ void parseZemismartScreenSwitch(Map descMap) {
         offset += length
     }
     Map relayUpdates = [:]
+    Map reportedUpdates = [:]
     records.each { record ->
-        processZemismartScreenDP(descMap, record.dp, record.type, record.bytes, relayUpdates)
+        processZemismartScreenDP(descMap, record.dp, record.type, record.bytes, relayUpdates, reportedUpdates)
     }
     if (!relayUpdates.isEmpty()) {
         // Child currentValue can lag within and between event calls; retain the last reports.
@@ -531,9 +556,20 @@ void parseZemismartScreenSwitch(Map descMap) {
         }
         updateParentSwitchState(null, null, reported)
     }
+    String masterState = reportedUpdates.screenMasterSwitch
+    boolean queryRelays = masterState != null && masterState != state.screenMasterState && relayUpdates.isEmpty()
+    // Record the master report before querying, so an identical response cannot cause a loop.
+    if (masterState != null) { state.screenMasterState = masterState }
+    reportedUpdates.each { name, value ->
+        sendEvent(name:name, value:value)
+        if (infoLogging) { log.info "${device.displayName} ${name} is ${value}" }
+    }
+    if (queryRelays) { sendZigbeeCommands(zigbee.command(CLUSTER_TUYA, 0x03, [destEndpoint:1])) }
 }
 
-void processZemismartScreenDP(final Map descMap, final int dp, final int dpType, final List<String> dpData, Map relayUpdates) {
+void processZemismartScreenDP(final Map descMap, final int dp, final int dpType, final List<String> dpData, Map relayUpdates, Map reportedUpdates) {
+    String attributeName = null
+    Map options = [:]
     switch (dp) {
         case 0x01:
         case 0x02:
@@ -541,25 +577,77 @@ void processZemismartScreenDP(final Map descMap, final int dp, final int dpType,
         case 0x04:
             if (dpType == 1 && dpData.size() == 1 && dpData[0] in ['00', '01']) {
                 relayUpdates[String.format('%02d', dp)] = dpData[0] == '01' ? 'on' : 'off'
-            }
+            } else if (debugLogging) { log.debug "Screen switch: invalid relay DP ${dp}, type ${dpType}, bytes ${dpData}" }
+            return
+        case 0x0D:
+        case 0x10:
+        case 0x65:
+            attributeName = dp == 0x0D ? 'screenMasterSwitch' : dp == 0x10 ? 'backlightMode' : 'childLock'
+            if (dpType == 1 && dpData.size() == 1 && dpData[0] in ['00', '01']) {
+                reportedUpdates[attributeName] = dpData[0] == '01' ? 'on' : 'off'
+            } else if (debugLogging) { log.debug "Screen switch: invalid ${attributeName}, type ${dpType}, bytes ${dpData}" }
+            return
+        case 0x0F:
+            attributeName = 'screenIndicatorMode'
+            options = ScreenIndicatorOptions
             break
+        case 0x13:
+        case 0x67:
+        case 0x68:
+            attributeName = dp == 0x13 ? 'delayColor' : dp == 0x67 ? 'onColor' : 'offColor'
+            options = ColorOptions
+            break
+        case 0x1D:
+        case 0x1E:
+        case 0x1F:
+        case 0x20:
+            attributeName = "powerOnBehavior_l${dp - 28}".toString()
+            options = PowerOnBehaviorOptions
+            break
+        case 0x6F:
+            attributeName = 'radarConfig'
+            options = RadarConfigOptions
+            break
+        case 0x66:
+            if (dpType == 2 && dpData.size() == 4 && Long.parseLong(dpData.join(''), 16) <= 100) {
+                reportedUpdates.backlightLevel = Long.parseLong(dpData.join(''), 16) as int
+            } else if (debugLogging) { log.debug "Screen switch: invalid brightness, type ${dpType}, bytes ${dpData}" }
+            return
+        case 0x07:
+        case 0x08:
+        case 0x09:
+        case 0x0A:
+            if (dpType == 2 && dpData.size() == 4) {
+                if (debugLogging) { log.debug "Screen switch: countdown ${dp - 6} = ${Long.parseLong(dpData.join(''), 16)} seconds (report only)" }
+            } else if (debugLogging) { log.debug "Screen switch: invalid countdown DP ${dp}, type ${dpType}, bytes ${dpData}" }
+            return
+        case 0x0E:
+        case 0x18:
+        case 0xC9:
+            if (debugLogging) { log.debug "Screen switch: diagnostic DP ${dp}, type ${dpType}, bytes ${dpData} (report only)" }
+            return
         case 0x69:
         case 0x6A:
         case 0x6B:
         case 0x6C:
-            if (dpType != 0) { break }
+            if (dpType != 0) {
+                if (debugLogging) { log.debug "Screen switch: invalid label DP ${dp}, type ${dpType}, bytes ${dpData}" }
+                return
+            }
             byte[] bytes = dpData.collect { Integer.parseInt(it, 16) as byte } as byte[]
             String text = new String(bytes, 'UTF-8')
             // A round trip rejects malformed UTF-8 instead of publishing replacement characters.
             if (screenTextHex(text).equalsIgnoreCase(dpData.join(''))) {
-                sendEvent(name:"screenLabel${dp - 104}", value:text)
-                if (infoLogging) { log.info "Display label ${dp - 104} is ${text}" }
+                reportedUpdates["screenLabel${dp - 104}".toString()] = text
             } else if (debugLogging) { log.debug "Screen switch: invalid UTF-8 in DP ${dp}" }
-            break
+            return
         default:
             if (debugLogging) { log.debug "Screen switch: ignored DP ${dp}, type ${dpType}, bytes ${dpData}" }
-            break
+            return
     }
+    if (dpType == 4 && dpData.size() == 1 && options.containsKey(Integer.parseInt(dpData[0], 16))) {
+        reportedUpdates[attributeName] = options[Integer.parseInt(dpData[0], 16)]
+    } else if (debugLogging) { log.debug "Screen switch: invalid ${attributeName}, type ${dpType}, bytes ${dpData}" }
 }
 
 private String screenTextHex(String text) {
@@ -663,6 +751,8 @@ void parse12GangSwitch(Map descMap) {
 @Field static final Map<Integer,String> BacklightSwitchOptions = [0: 'off', 1: 'on']      // 0x10
 @Field static final Map<Integer,String> LightIndicatorOptions = [0: 'none', 1: 'lit when on', 2: 'lit when off']        // 0x0F
 @Field static final Map<Integer,String> ColorOptions =  [0: 'Red', 1: 'Blue', 2: 'Green', 3: 'White', 4: 'Yellow', 5: 'Magenta', 6: 'Cyan', 7: 'WarmWhite', 8: 'WarmYellow']
+@Field static final Map<Integer,String> ScreenIndicatorOptions = [0: 'off', 1: 'on_off_status', 2: 'switch_position']
+@Field static final Map<Integer,String> RadarConfigOptions = [0: 'none', 1: '10s', 2: '20s', 3: '30s', 4: '45s', 5: '60s']
 
 void processTuyaDP(final Map descMap, final int dp, final int dp_id, final int fncmd, final int dp_len=0) {
     if (debugLogging) { log.trace "processTuyaDP: dp=${dp} dp_id=${dp_id} fncmd=${fncmd} dp_len=${dp_len}" }
@@ -1144,7 +1234,8 @@ void syncTuyaDateTime() {
         log.error "${device.displayName} cannot resolve current location. please set location in Hubitat location setting. Setting timezone offset to zero"
     }
     //
-    List<String> cmds = zigbee.command(0xEF00, 0x24, '0008' + zigbee.convertToHexString((int)(now() / 1000), 8) + zigbee.convertToHexString((int)((now() + offset) / 1000), 8))
+    String payloadSize = isZemismartScreenSwitch() ? '0800' : '0008'
+    List<String> cmds = zigbee.command(0xEF00, 0x24, payloadSize + zigbee.convertToHexString((int)(now() / 1000), 8) + zigbee.convertToHexString((int)((now() + offset) / 1000), 8))
     sendZigbeeCommands(cmds)
     if (debugLogging) { log.debug "${device.displayName} Tuya device time synchronized" }
 }
@@ -1166,10 +1257,9 @@ def lastCheckin() {    // send event for heartbeat
 def off() {
     if (infoLogging) { log.info 'Turn all switches OFF' }
     if (isZemismartScreenSwitch()) {
-        List<String> cmds = []
-        for (int gang = 1; gang <= 4; gang++) {
-            cmds += getTuyaCommand(zigbee.convertToHexString(gang, 2), DP_TYPE_BOOL, '00')
-        }
+        List<String> cmds = getTuyaCommand('0D', DP_TYPE_BOOL, '00')
+        cmds += ['delay 1000']
+        cmds += zigbee.command(CLUSTER_TUYA, 0x03, [destEndpoint:1])
         sendZigbeeCommands(cmds)
         return
     }
@@ -1213,10 +1303,9 @@ def off() {
 def on() {
     if (infoLogging) { log.info 'Turn all switches ON' }
     if (isZemismartScreenSwitch()) {
-        List<String> cmds = []
-        for (int gang = 1; gang <= 4; gang++) {
-            cmds += getTuyaCommand(zigbee.convertToHexString(gang, 2), DP_TYPE_BOOL, '01')
-        }
+        List<String> cmds = getTuyaCommand('0D', DP_TYPE_BOOL, '01')
+        cmds += ['delay 1000']
+        cmds += zigbee.command(CLUSTER_TUYA, 0x03, [destEndpoint:1])
         sendZigbeeCommands(cmds)
         return
     }
@@ -1553,6 +1642,51 @@ void deleteObsoleteChildren() {
     }
 }
 
+private Map screenPreferenceOptions(String key) {
+    if (key == 'screenIndicatorMode') { return ScreenIndicatorOptions }
+    if (key == 'radarConfig') { return RadarConfigOptions }
+    if (key in ['backlightMode', 'childLlock']) { return SwitchStateOptions }
+    if (key in ['onColor', 'offColor', 'delayColor']) { return ColorOptions }
+    if (key ==~ /powerOnBehavior_l[1-4]/) { return PowerOnBehaviorOptions }
+    return [:]
+}
+
+private boolean validScreenPreference(String key, Object value) {
+    boolean valid = false
+    if (key ==~ /screenLabel[1-4]/) {
+        valid = value instanceof String && validScreenText(value)
+    } else if (key in ['debugLogging', 'infoLogging']) {
+        valid = value?.toString() in ['true', 'false']
+    } else if (key == 'backlightLevel') {
+        try {
+            BigDecimal brightness = new BigDecimal(value.toString())
+            valid = brightness >= 0 && brightness <= 100 && brightness.stripTrailingZeros().scale() <= 0
+        } catch (Exception ignored) { valid = false }
+    } else {
+        valid = screenPreferenceOptions(key).containsValue(value)
+    }
+    if (!valid) { log.warn "Screen switch: unsupported preference or invalid value ${key} = ${value}" }
+    return valid
+}
+
+List<String> zemismartScreenConfig() {
+    List<String> cmds = []
+    if (!isZemismartScreenSwitch()) { return cmds }
+    [backlightLevel:'66', childLlock:'65', onColor:'67', offColor:'68', delayColor:'13', radarConfig:'6F'].each { key, dp ->
+        def value = settings[key]
+        if (value != null && value != '' && validScreenPreference(key, value)) {
+            if (key == 'backlightLevel') {
+                cmds += getTuyaCommand(dp, DP_TYPE_VALUE, zigbee.convertToHexString(new BigDecimal(value.toString()).intValue(), 8))
+            } else {
+                int code = screenPreferenceOptions(key).find { it.value == value }.key
+                cmds += getTuyaCommand(dp, key == 'childLlock' ? DP_TYPE_BOOL : DP_TYPE_ENUM, zigbee.convertToHexString(code, 2))
+            }
+            if (infoLogging) { log.info "Setting ${key} to ${value}" }
+        }
+    }
+    return cmds
+}
+
 List<String> screenLabelConfig() {
     List<String> cmds = []
     if (!isZemismartScreenSwitch()) { return cmds }
@@ -1561,7 +1695,8 @@ List<String> screenLabelConfig() {
         String key = gang.toString()
         String text = settings["screenLabel${gang}"] ?: ''
         // Unconfigured blanks leave factory labels alone. Clearing a previously sent label is explicit.
-        if ((!requests.containsKey(key) && text.trim().isEmpty()) || requests[key] == text) { continue }
+        if (!requests.containsKey(key) && text.trim().isEmpty()) { continue }
+        if (requests[key] == text && device.currentValue("screenLabel${gang}") == text) { continue }
         if (!validScreenText(text)) {
             log.warn "Invalid display label ${gang}: maximum 12 UTF-16 units of valid text"
             continue
@@ -1577,7 +1712,17 @@ List<String> screenLabelConfig() {
 
 List<String> switchLightModeConfig() {
     List<String> cmds = []
-    if (isZemismartScreenSwitch()) { return cmds }
+    if (isZemismartScreenSwitch()) {
+        [screenIndicatorMode:'0F', backlightMode:'10'].each { key, dp ->
+            def value = settings[key]
+            if (value != null && value != '' && validScreenPreference(key, value)) {
+                int code = screenPreferenceOptions(key).find { it.value == value }.key
+                cmds += getTuyaCommand(dp, key == 'backlightMode' ? DP_TYPE_BOOL : DP_TYPE_ENUM, zigbee.convertToHexString(code, 2))
+                if (infoLogging) { log.info "Setting ${key} to ${value}" }
+            }
+        }
+        return cmds
+    }
     if (isTratoZemismartKeypad()) {
         int bl = settings?.switchLightMode == 'on' ? 1 : 0
         String dpValHex = zigbee.convertToHexString(bl as int, 2)
@@ -1617,7 +1762,18 @@ List<String> switchLightModeConfig() {
 
 List<String> powerOnBehaviorConfig() {
     List<String> cmds = []
-    if (isZemismartScreenSwitch()) { return cmds }
+    if (isZemismartScreenSwitch()) {
+        for (int gang = 1; gang <= 4; gang++) {
+            String key = "powerOnBehavior_l${gang}"
+            def value = settings[key]
+            if (value != null && value != '' && validScreenPreference(key, value)) {
+                int code = PowerOnBehaviorOptions.find { it.value == value }.key
+                cmds += getTuyaCommand(zigbee.convertToHexString(28 + gang, 2), DP_TYPE_ENUM, zigbee.convertToHexString(code, 2))
+                if (infoLogging) { log.info "Setting ${key} to ${value}" }
+            }
+        }
+        return cmds
+    }
     if (isTratoZemismartKeypad()) {
         int rl = settings?.powerOnBehavior == 'off' ? 0 : settings?.powerOnBehavior == 'on' ? 1 : 2
         if (debugLogging) { log.debug "Relay mode: ${rl} (${settings?.powerOnBehavior})" }

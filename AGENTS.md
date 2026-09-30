@@ -10,7 +10,7 @@ community contributions (hhorigian, Nathanael-Shermett).
 
 Community thread: https://community.hubitat.com/t/re-release-moes-zigbee-wall-switch-1-2-3-gang-tuya-ts0601-switches/138120
 Current version: **1.5.3 (2026-09-30)** — see `version()` / `timeStamp()` in the driver.
-Zemismart screen-switch control and labels are implemented for testing; target-device operation
+Zemismart screen-switch master/relay control, configuration, and labels are implemented for testing; target-device operation
 has not yet been confirmed. This guide was updated on 2026-09-30.
 
 **Bug work:** a reviewed list of known bugs with exact locations, fixes, and verification steps is in
@@ -130,6 +130,8 @@ payloads and reading both length bytes. It validates the complete frame before a
 rejects truncated frames, validates known DP types, and skips unknown DPs. Command `24` uses
 the common time-sync helper; `25` replies with gateway-connected payload `010001` on endpoint 01.
 Global ZCL responses and command `0B` are ignored. Reported endpoints other than 01 are rejected.
+Configuration and label events are collected until all records have been processed; duplicate DPs
+publish the last valid value. Master reports never fabricate individual relay states.
 
 `getTuyaAttributeValue()` decodes the value **big-endian** (Tuya DP order) into a
 signed 32-bit int.
@@ -184,7 +186,22 @@ signed 32-bit int.
 | DP | Meaning | Encoding / event |
 |---|---|---|
 | 0x01–0x04 | physical relays 1–4 | BOOL `01`, one byte 00/01; child `switch` + parent aggregate |
+| 0x0D | native master switch | BOOL; `screenMasterSwitch` (separate from parent aggregate) |
+| 0x0F | indicator mode | ENUM; `screenIndicatorMode`: off / on_off_status / switch_position |
+| 0x10 | backlight switch | BOOL; `backlightMode`: off / on |
+| 0x13 | color while delayed | ENUM; `delayColor`, existing `ColorOptions` |
+| 0x1D–0x20 | power-on behavior per relay | ENUM; `powerOnBehavior_l1`–`powerOnBehavior_l4`: off / on / last state |
+| 0x65 | child lock | BOOL; `childLock`: off / on (preference retains spelling `childLlock`) |
+| 0x66 | backlight brightness | VALUE, four bytes, 0–100; `backlightLevel` |
+| 0x67 / 0x68 | colors when on / off | ENUM; `onColor` / `offColor`, existing `ColorOptions` |
 | 0x69–0x6C (105–108) | physical display labels 1–4 | RAW `00`, UTF-8; `screenLabel1`–`screenLabel4` string attributes |
+| 0x6F | radar configuration | ENUM; `radarConfig`: none / 10s / 20s / 30s / 45s / 60s |
+
+DPs 0x07–0x0A (countdowns), 0x0E (global relay_status), 0x18 (test_bit), and 0xC9
+(cycle_schedule) are diagnostics only. Countdown values are decoded as unsigned four-byte
+seconds and debug-logged; the others retain DP/type/raw bytes in debug logs. No countdown
+preferences, attributes, commands, or writes are implemented for this family. Do not use DP 0xD1
+from another model's cycle-schedule mapping. DP 0x13 is a color setting, not a schedule editor.
 
 Identity evidence: [marcusvrsilva's post 56](https://community.hubitat.com/t/138120/56) and the
 pairing screenshot supplied by the user in this implementation conversation. The screenshot
@@ -213,14 +230,15 @@ STRING='03', ENUM='04', BITMAP='05'. `SETTIME` is unused.
 - `componentOn/Off(cd)`: childId → DP per family (SF: 0x18+n BOOL; nvxorhcj: 01–06/65/66;
   Quero: physical 0x18+n BOOL, virtual 0x05+n ENUM with 03=on/02=off; traditional: childId used
   directly as DP hex in a raw frame).
-- Screen switch: parent `on()`/`off()` send four individual BOOL writes to DPs 01–04;
-  `componentOn/Off()` use the child's corresponding DP. All use the existing command builder,
-  endpoint 01, and existing child IDs.
+- Screen switch: parent `on()`/`off()` send one BOOL write to DP 0D, followed by an additional
+  one-second delay and a DP query. No automatic four-relay fallback. `componentOn/Off()` still
+  use DPs 01–04. All use the existing command builder and existing child IDs on endpoint 01.
 - `refresh()` → `queryAllTuyaDP()` = cluster 0xEF00 command **0x03** (query all DPs). For the
   screen switch, this is preceded by Basic-cluster reads of attributes 0004, 0000, 0001, 0005,
   0007, FFFE. Common installation/initialization/refresh paths therefore use the same sequence.
-- `syncTuyaDateTime()`: 0xEF00 cmd 0x24, payload `0008` + UTC epoch + local epoch
-  (each uint32); replies to the device's `24` request.
+- `syncTuyaDateTime()`: 0xEF00 cmd 0x24, length prefix `0800` for the screen switch (upstream
+  little-endian UINT16), existing `0008` for other families, then UTC epoch + local epoch
+  (each uint32, 1970-based); replies to the device's `24` request.
 
 ---
 
@@ -241,6 +259,10 @@ STRING='03', ENUM='04', BITMAP='05'. `SETTIME` is unused.
 - Screen-switch reports retain `state.screenRelayStates`, apply the full batch, then call the
   same aggregate helper with its optional third `reportedStates` map. Unknown relay states must
   not produce a false all-off report. Four children are explicitly selected in `setupChildDevices()`.
+- DP 0D publishes `screenMasterSwitch` independently. After a batch, a changed master report
+  with no valid relay updates triggers one DP query. `state.screenMasterState` is stored before
+  that query to prevent identical replies causing a loop. Parent `switch` remains the OR of
+  reported child states; never infer four child values from one master report.
 - `getChildId(cd)` = last 2 chars of the DNI.
 
 ## 6. Commands & preferences
@@ -250,8 +272,11 @@ hub reboot**, see BUGS.md B1), and `setPreference(name, value)` (added 1.5.2 by
 Nathanael-Shermett for runtime control, e.g. changing `lightIndicatorMode` from Rule Machine; it
 infers the type, calls `device.updateSetting`, patches `settings[key]` in-memory, then calls
 `updated()` — no validation, see BUGS.md).
-For screen-label preferences, `setPreference()` preserves the text (including spaces) and uses
-type `text`; writes still occur only through `updated()`. There is no `setScreenLabel` command.
+For the screen switch, `setPreference()` validates recognized names, types and values before
+updating settings. Unsupported names (including countdowns and global powerOnBehavior) are
+rejected without mutation or sending. Labels preserve text/spaces and use type `text`; logging
+preferences use bool and brightness uses number. Writes still occur only through `updated()`.
+Other families retain their existing behavior. There is no `setScreenLabel` command.
 With `_DEBUG = true` (default false): `testParse`, `queryAllTuyaDP`, `test` (broken —
 calls a nonexistent method, BUGS.md C1), `tuyaTest`.
 
@@ -259,8 +284,10 @@ calls a nonexistent method, BUGS.md C1), `tuyaTest`.
 - All: `infoLogging`, `debugLogging` (both default true; debug auto-off after 24 h via
   `runIn(86400, logsOff)`). `powerOnBehavior` is shown for all except the screen switch.
 - Screen switch: four text preferences `screenLabel1`–`screenLabel4`, always visible for this
-  exact device. Label handling is enabled without an `enableScreenLabels` toggle. The user
-  explicitly requested both control and label functionality for testing.
+  exact device; no enable toggle. Optional configuration preferences: `screenIndicatorMode`,
+  `backlightMode`, `backlightLevel`, `childLlock`, `onColor`, `offColor`, `delayColor`, `radarConfig`,
+  and `powerOnBehavior_l1`–`powerOnBehavior_l4`. All new configuration starts unset, without
+  selected defaults; null/empty means do not configure. Keep global powerOnBehavior hidden.
 - Trato keypad: `backlightLevel` (0–100, DP 0x66), `backlightMode` (0x10), `lightIndicatorMode`
   (0x0F), `onColor`/`offColor` (0x67/0x68), `childLlock` (sic — **the typo'd name is frozen**,
   renaming orphans saved settings; DP 0x65).
@@ -276,20 +303,29 @@ generic config functions already wrote (BUGS.md B-item), and the generic functio
 internally on the same family helpers — read all of `switchLightModeConfig()` /
 `powerOnBehaviorConfig()` before touching `updated()`.
 
-Screen labels follow the existing configuration structure: `updated()` adds `screenLabelConfig()`
-to its command list, then sends through the common batch. Both generic configuration helpers
-return no commands for this family; generic backlight/power-on settings are hidden and bypassed.
+Screen settings follow the existing configuration structure: `switchLightModeConfig()` handles
+indicator/backlight, `powerOnBehaviorConfig()` handles per-relay startup modes, and `updated()`
+adds `zemismartScreenConfig()` (brightness/lock/colors/radar) plus `screenLabelConfig()`.
+All helpers return command lists for the common send at the end of `updated()`. Each helper
+owns distinct DPs. Existing maps are reused; only ScreenIndicatorOptions and RadarConfigOptions
+are new. `screenPreferenceOptions()` / `validScreenPreference()` share screen-only validation.
+Invalid settings warn and are skipped individually; other valid settings are still sent.
+Persistent configured controls reapply on each explicit save. Initialization, refresh, and reports
+do not send configuration. Do not call `countdownConfig()` for this family.
 Do not add separate lifecycle methods, label commands, or child-creation/reset calls to `updated()`.
 
 - Labels change only the physical display; never automatically rename Hubitat children.
 - Encode as UTF-8 RAW, with the payload length calculated from bytes by the common sender.
 - Reject more than 12 UTF-16 code units or malformed surrogates; do not truncate. Preserve accents
   and spaces. Invalid labels produce no write for that label.
-- Save Preferences sends changed values. Unconfigured blank/whitespace-only defaults do not
-  overwrite factory text. Emptying a previously sent label sends an explicit clear.
+- Save Preferences sends changed or unconfirmed labels. Suppress only when both the last
+  requested text and the report-backed attribute match. This permits retrying missed writes.
+  Unconfigured blank/whitespace-only defaults do not overwrite factory text. Emptying a
+  previously requested label sends an explicit clear. No automatic/background label retries.
 - `state.screenLabelRequests` tracks requested values, separately from the report-backed
   `screenLabel1`–`screenLabel4` attributes. Sending a command does not confirm display changes.
-- `initializeVars()` initializes only missing label settings; retain saved text and label state
+- `initializeVars()` initializes only missing label settings; optional configuration stays unset.
+  Retain saved configuration, text, and label state
   across initialization/restart. Refresh does not write labels. Logging defaults remain in the
   shared initialization path.
 
@@ -332,17 +368,23 @@ Do not add separate lifecycle methods, label commands, or child-creation/reset c
 
 ## 9. Current verification and deployment status (2026-09-30)
 
-- The screen-switch refactor passed 19 focused local packet-replay groups using mocked Hubitat
-  APIs, including representative traditional, Star Feather, and Quero regressions. The temporary
+- The expanded screen-switch implementation passed 32 focused local packet-replay groups using mocked Hubitat
+  APIs, including representative traditional, Trato, Star Feather, and Quero regressions. Coverage
+  includes all enum values, brightness boundaries, invalid preferences/reports, master-only query
+  loop prevention, aggregate state, report-only diagnostic DPs, label retry, and time prefixes. The temporary
   harness is outside the repository; there is no committed automated test suite.
-- An earlier refactored copy compiled successfully on the DEV hub using a temporary, unassigned
-  driver, subsequently deleted. The final cluster-fingerprint and always-enabled-label edits
-  received local diff checks; do not claim that the exact latest file was compiled on-hub.
+- The expanded implementation compiled successfully on the DEV hub as temporary driver 5246
+  (unique name, fingerprints removed, no assigned devices). The temporary driver was deleted
+  and its absence verified. Installed driver 1218 remained at editor revision 164 with two
+  assigned devices; it was not updated during this implementation.
 - DEV hub: `http://192.168.0.151`, production driver code ID **1218**. The user reported a manual
   upload before the final removal of the label toggle. Do not assume subsequent local edits are
   deployed, and do not automatically upload or release when editing documentation.
-- Relay control, physical-press reports, aggregate state, restart/refresh operation, and display
-  labels still require confirmation on the target device. Test all four positions, accented text,
-  the length limit, and explicit clearing. Keep BUGS.md completion gates intact.
-- Timers, colors, radar settings, child lock, child naming, and unrelated legacy fixes remain out
-  of scope. A local version bump is not an HPM release or authorization to publish.
+- Relay/master control, physical-press reports, aggregate state, configuration controls,
+  restart/refresh operation, and display labels still require confirmation on the target device.
+  Test all four positions, accented text, the length limit, retrying unconfirmed labels, and explicit
+  clearing. Test lock/unlock and per-relay startup behavior under device-owner control. Keep
+  BUGS.md completion gates intact.
+- Writable countdowns/cycle schedules, MCU firmware discovery, child naming, other manufacturer
+  IDs, proprietary E000/D0/D2 handling, and unrelated legacy fixes remain out of scope. A local
+  version bump is not an HPM release or authorization to publish.
