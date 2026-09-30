@@ -34,12 +34,13 @@
  *  revision 1.5.0 - 2026-04-15 - kkossev - fixed Moes Star Feather on()/off() commands; added all known Moes Star Feather Zigbee Wall Switches (1-4 gangs) with support for all their features, including _TZE200_z3u99qxt @smc.cross 
  *  revision 1.5.1 - 2026-06-03 - kkossev - added Quero automatização 1-gang _TZE284_nzns7udm, 2-gang _TZE284_1aqlsquf, 3-gang _TZE284_pgxndxp4; renamed _TZE284_ms97nkyy to 'Quero automatização 6-gang switch'; each Quero N-gang device creates N physical + N virtual child switches;
  *  revision 1.5.2 - 2026-06-21 - Nathanael-Shermett - added setPreference command
+ *  revision 1.5.3 - 2026-09-30 - kkossev - added Zemismart _TZE284_xibaabmu 4-gang control and screen labels @marcusvrsilva
  *
  *
 */
 
-static String version() { '1.5.2' }
-static String timeStamp() { '2026/06/21 04:09 PM' }
+static String version() { '1.5.3' }
+static String timeStamp() { '2026/09/30 07:38 AM' }
 import hubitat.device.HubAction
 import hubitat.device.Protocol
 import groovy.transform.Field
@@ -116,11 +117,17 @@ metadata {
         fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE284_nzns7udm", endpointId:'01', inClusters:"0000,0004,0005,EF00,0000,ED00", outClusters:"0019,000A",  controllerType: "ZGB", deviceJoinName: 'Quero automatização 1-gang switch'
         fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE284_1aqlsquf", endpointId:'01', inClusters:"0000,0004,0005,EF00,0000,ED00", outClusters:"0019,000A",  controllerType: "ZGB", deviceJoinName: 'Quero automatização 2-gang switch'
         fingerprint profileId:"0104", model:"TS0601", manufacturer:"_TZE284_pgxndxp4", endpointId:'01', inClusters:"0000,0004,0005,EF00,0000,ED00", outClusters:"0019,000A",  controllerType: "ZGB", deviceJoinName: 'Quero automatização 3-gang switch'
+        // marcusvrsilva: https://community.hubitat.com/t/138120/56; cluster list confirmed by supplied pairing screenshot.
+        fingerprint profileId:'0104', model:'TS0601', manufacturer:'_TZE284_xibaabmu', endpointId:'01', inClusters:'0004,0005,EF00,0000,ED00', outClusters:'0019,000A', controllerType:'ZGB', deviceJoinName:'Zemismart 4-gang screen switch'
     }
     
     attribute 'switchLightMode', 'enum', ['off', 'on', 'position']
     attribute 'powerOnBehavior', 'enum', ['off', 'on', 'last state']
     attribute 'lastCheckin', 'string'
+    attribute 'screenLabel1', 'string'
+    attribute 'screenLabel2', 'string'
+    attribute 'screenLabel3', 'string'
+    attribute 'screenLabel4', 'string'
     attribute 'backlightLevel', 'number'
     attribute 'childLock', 'enum', ['off', 'on']
     attribute 'backlightMode', 'enum', ['off', 'on']
@@ -146,7 +153,12 @@ metadata {
         input(name: 'infoLogging', type: 'bool', title: ("<b>Enable info logging</b>"), description: '', defaultValue: true)
         input(name: 'debugLogging', type: 'bool', title: ("<b>Enable debug logging</b>"), description: '', defaultValue: true)
         if (device) {
-            if (isTratoZemismartKeypad()) {
+            if (isZemismartScreenSwitch()) {
+                for (int gang = 1; gang <= 4; gang++) {
+                    input(name: "screenLabel${gang}", type: 'text', title: "Display label ${gang}", description: 'Maximum 12 characters (some symbols count as two). Save Preferences to apply; removing a previously set label clears it.', defaultValue: '', required: false)
+                }
+            }
+            else if (isTratoZemismartKeypad()) {
                 input(name: 'backlightLevel', type: 'number', title: ("<b>Led: Backlight Level</b>"), description: ("Select led backlight level 0-100 (default: 50)"), defaultValue: 50, range: [0..100])
                 input(name: 'backlightMode', type: 'enum', title: ("<b>Led: Backlight Mode</b>"), description: ("Select backlight mode (default: on)"), options: ['off', 'on'], defaultValue: 'on')
                 input(name: 'lightIndicatorMode', type: 'enum', title: ("<b>Led: Indicator Mode</b>"), description: ("Select led indicator mode (default: lit when on)"), options: ['none', 'lit when on', 'lit when off'], defaultValue: 'lit when on')
@@ -185,13 +197,19 @@ metadata {
             else {
                 input(name: 'switchLightMode', type: 'enum', title: ("<b>Switch Backlight Mode</b>"), description: ("Select type of backlight indicator (default: Position)"), options: ['off', 'on', 'position'], defaultValue: 'position')
             }
-            input(name: 'powerOnBehavior', type: 'enum', title: ("<b>Switch Power On Behavior</b>"), description: ("Select relay renew state after AC failed (default: OFF)"), options: ['off', 'on', 'last state'], defaultValue: 'off')
+            if (!isZemismartScreenSwitch()) {
+                input(name: 'powerOnBehavior', type: 'enum', title: ("<b>Switch Power On Behavior</b>"), description: ("Select relay renew state after AC failed (default: OFF)"), options: ['off', 'on', 'last state'], defaultValue: 'off')
+            }
         }
     }
 }
 
 boolean isTratoZemismartKeypad() {
     return device.getDataValue('manufacturer') in ['_TZE204_rzdkn5rx', '_TZE204_zpvusbtv', '_TZE204_rkbxtclc']
+}
+
+boolean isZemismartScreenSwitch() {
+    return device.getDataValue('model') == 'TS0601' && device.getDataValue('manufacturer') == '_TZE284_xibaabmu'
 }
 
 boolean isMoesStarFeatherSwitch() { //return true
@@ -242,7 +260,12 @@ boolean is8GangNvxorhcj() {
 }
 
 void initializeVars() {
-    if (isTratoZemismartKeypad()) {
+    if (isZemismartScreenSwitch()) {
+        for (int gang = 1; gang <= 4; gang++) {
+            if (settings["screenLabel${gang}"] == null) { device.updateSetting("screenLabel${gang}", [type:'text', value:'']) }
+        }
+    }
+    else if (isTratoZemismartKeypad()) {
         device.updateSetting('backlightMode', [type:'enum', value:'on'])
         device.updateSetting('lightIndicatorMode', [type:'enum', value:'lit when on'])
     }
@@ -307,6 +330,9 @@ def updated() {
     if (debugLogging) { runIn(86400, logsOff) }
     if (debugLogging) { log.debug 'Parent updated' }
     cmds = switchLightModeConfig() + powerOnBehaviorConfig() /*+ refresh()*/
+    if (isZemismartScreenSwitch()) {
+        cmds += screenLabelConfig()
+    }
     if (isMoesStarFeatherSwitch()) {
         cmds += vibrationModeConfig() + inductionModeConfig() + switchModeConfig() + countdownConfig() + momentaryConfig()
     }
@@ -344,6 +370,10 @@ def setPreference(String preference, String value) {
     }
 
     String type = val.isNumber() ? 'number' : (val.toLowerCase() in ['true', 'false'] ? 'bool' : 'enum')
+    if (isZemismartScreenSwitch() && key ==~ /screenLabel[1-4]/) {
+        type = 'text'
+        val = value ?: '' // Preserve numeric-looking text and surrounding spaces.
+    }
     if (infoLogging) { log.info "setPreference: ${key} = ${val} (${type})" }
 
     device.updateSetting(key, [value: val, type: type])
@@ -355,7 +385,7 @@ def setPreference(String preference, String value) {
 private static int getCLUSTER_TUYA()          { 0xEF00 }
 private static int getSETDATA()               { 0x00 }
 private static int getSETTIME()               { 0x24 }
-private static String getDP_TYPE_RAW()        { '01' }    // [ bytes ]
+private static String getDP_TYPE_RAW()        { '00' }    // [ bytes ]
 private static String getDP_TYPE_BOOL()       { '01' }    // [ 0/1 ]
 private static String getDP_TYPE_VALUE()      { '02' }    // [ 4 byte value ]
 private static String getDP_TYPE_STRING()     { '03' }    // [ N byte string ]
@@ -376,6 +406,10 @@ def parse(String description) {
             }
             if (isQueroSwitch()) {
                 parse12GangSwitch(descMap)  // handle Quero automatização switch parsing
+                return [:]
+            }
+            if (isZemismartScreenSwitch()) {
+                parseZemismartScreenSwitch(descMap)
                 return [:]
             }
             if ((descMap?.command in ['00', '01', '02']) && descMap?.data?.size() >= 7) {
@@ -433,6 +467,115 @@ def parse(String description) {
             }
         }
     }
+}
+
+// Protocol reference: zigbee-herdsman-converters, zemismart.ts ZMS-206US-4
+// at 8c6213a285159cb8ebb63436db2aef7c39565772. Scope is the exact fingerprint above.
+void parseZemismartScreenSwitch(Map descMap) {
+    String command = descMap.command?.toUpperCase()
+    if (descMap.sourceEndpoint != null && descMap.sourceEndpoint != '01') { return }
+    // Global ZCL default responses (0B) must never be interpreted as Tuya data.
+    if (descMap.isClusterSpecific == false || command == '0B') { return }
+    if (command == '24') {
+        syncTuyaDateTime()
+        return
+    }
+    if (command == '25') {
+        // ZCL UINT16 payloadSize is little-endian, followed by gateway-connected = 1.
+        sendZigbeeCommands(zigbee.command(CLUSTER_TUYA, 0x25, [destEndpoint:1], 200, '010001'))
+        return
+    }
+    if (!(command in ['00', '01', '02', '05', '06'])) { return }
+    List data = descMap.data
+    if (data == null || data.size() < 2 || data.any { !(it instanceof String) || !(it ==~ /[0-9a-fA-F]{2}/) }) {
+        if (debugLogging) { log.debug 'Screen switch: invalid Tuya payload' }
+        return
+    }
+    // Decode the complete frame first: a truncated trailing record cannot publish partial state.
+    List<Map> records = []
+    int offset = 2
+    while (offset < data.size()) {
+        if (data.size() - offset < 4) {
+            if (debugLogging) { log.debug 'Screen switch: truncated DP header' }
+            return
+        }
+        int dp = Integer.parseInt(data[offset], 16)
+        int dpType = Integer.parseInt(data[offset + 1], 16)
+        int length = Integer.parseInt(data[offset + 2], 16) * 256 + Integer.parseInt(data[offset + 3], 16)
+        offset += 4
+        if (length > data.size() - offset) {
+            if (debugLogging) { log.debug "Screen switch: truncated DP ${dp}, declared length ${length}" }
+            return
+        }
+        records.add([dp:dp, type:dpType, bytes:new ArrayList(data.subList(offset, offset + length))])
+        offset += length
+    }
+    Map relayUpdates = [:]
+    records.each { record ->
+        processZemismartScreenDP(descMap, record.dp, record.type, record.bytes, relayUpdates)
+    }
+    if (!relayUpdates.isEmpty()) {
+        // Child currentValue can lag within and between event calls; retain the last reports.
+        Map reported = [:]
+        for (int gang = 1; gang <= 4; gang++) {
+            String key = String.format('%02d', gang)
+            reported[key] = state.screenRelayStates?.get(key) ?: getChildDevice("${device.id}-${key}")?.currentValue('switch')
+        }
+        reported.putAll(relayUpdates)
+        state.screenRelayStates = reported
+        relayUpdates.each { key, value ->
+            def child = getChildDevice("${device.id}-${key}")
+            if (child) {
+                child.parse([[name:'switch', value:value, descriptionText:"${child.displayName} is ${value}"]])
+            } else { log.warn "Screen switch: missing child ${key}; run Initialize" }
+        }
+        updateParentSwitchState(null, null, reported)
+    }
+}
+
+void processZemismartScreenDP(final Map descMap, final int dp, final int dpType, final List<String> dpData, Map relayUpdates) {
+    switch (dp) {
+        case 0x01:
+        case 0x02:
+        case 0x03:
+        case 0x04:
+            if (dpType == 1 && dpData.size() == 1 && dpData[0] in ['00', '01']) {
+                relayUpdates[String.format('%02d', dp)] = dpData[0] == '01' ? 'on' : 'off'
+            }
+            break
+        case 0x69:
+        case 0x6A:
+        case 0x6B:
+        case 0x6C:
+            if (dpType != 0) { break }
+            byte[] bytes = dpData.collect { Integer.parseInt(it, 16) as byte } as byte[]
+            String text = new String(bytes, 'UTF-8')
+            // A round trip rejects malformed UTF-8 instead of publishing replacement characters.
+            if (screenTextHex(text).equalsIgnoreCase(dpData.join(''))) {
+                sendEvent(name:"screenLabel${dp - 104}", value:text)
+                if (infoLogging) { log.info "Display label ${dp - 104} is ${text}" }
+            } else if (debugLogging) { log.debug "Screen switch: invalid UTF-8 in DP ${dp}" }
+            break
+        default:
+            if (debugLogging) { log.debug "Screen switch: ignored DP ${dp}, type ${dpType}, bytes ${dpData}" }
+            break
+    }
+}
+
+private String screenTextHex(String text) {
+    return text.getBytes('UTF-8').collect { String.format('%02X', it & 0xFF) }.join('')
+}
+
+private boolean validScreenText(String text) {
+    if (text == null || text.length() > 12) { return false }
+    for (int i = 0; i < text.length(); i++) {
+        char ch = text.charAt(i)
+        if (Character.isHighSurrogate(ch)) {
+            if (i + 1 >= text.length() || !Character.isLowSurrogate(text.charAt(i + 1))) { return false }
+            i++
+        } else if (Character.isLowSurrogate(ch)) { return false }
+    }
+    return true
 }
 
 void parseTratoZemismartKeypad(Map descMap) {
@@ -931,17 +1074,20 @@ void process12GangDP(final Map descMap, final int dp, final int dp_id, final int
     }
 }
 
-void updateParentSwitchState(String childId = null, String newState = null) {
+void updateParentSwitchState(String childId = null, String newState = null, Map reportedStates = [:]) {
     def cdsOn = 0
     // count number of switches on
     getChildDevices().each { child ->
         String childSwitchId = getChildId(child)
         // If this is the child being updated, use the new state; otherwise query current state
         String switchState = (childId != null && childSwitchId == childId) ? newState : child.currentValue('switch')
+        if (reportedStates.containsKey(childSwitchId)) { switchState = reportedStates[childSwitchId] }
         if (switchState == 'on') {
             cdsOn++
         }
     }
+    // A multi-DP batch may arrive before the platform has updated child currentValue().
+    if (cdsOn == 0 && reportedStates.values().any { it == null }) { return }
     String parentState = cdsOn > 0 ? 'on' : 'off'
     if (device.currentValue('switch') != parentState) {
         if (debugLogging) { log.debug "Parent Switch turned ${parentState.toUpperCase()}  (number of child switches on = ${cdsOn})" }
@@ -1019,6 +1165,14 @@ def lastCheckin() {    // send event for heartbeat
 
 def off() {
     if (infoLogging) { log.info 'Turn all switches OFF' }
+    if (isZemismartScreenSwitch()) {
+        List<String> cmds = []
+        for (int gang = 1; gang <= 4; gang++) {
+            cmds += getTuyaCommand(zigbee.convertToHexString(gang, 2), DP_TYPE_BOOL, '00')
+        }
+        sendZigbeeCommands(cmds)
+        return
+    }
     if (is8GangNvxorhcj()) {
         List<String> cmds = []
         ['01', '02', '03', '04', '05', '06', '65', '66'].each { String dpHex ->
@@ -1058,6 +1212,14 @@ def off() {
 
 def on() {
     if (infoLogging) { log.info 'Turn all switches ON' }
+    if (isZemismartScreenSwitch()) {
+        List<String> cmds = []
+        for (int gang = 1; gang <= 4; gang++) {
+            cmds += getTuyaCommand(zigbee.convertToHexString(gang, 2), DP_TYPE_BOOL, '01')
+        }
+        sendZigbeeCommands(cmds)
+        return
+    }
     if (is8GangNvxorhcj()) {
         List<String> cmds = []
         ['01', '02', '03', '04', '05', '06', '65', '66'].each { String dpHex ->
@@ -1113,7 +1275,11 @@ void componentOn(childDevice) {
     if (debugLogging) { log.debug "component state is ON - ${childDevice} {${childDevice.deviceNetworkId}}" }
     if (infoLogging) { log.info "${childDevice} is ON" }
     
-    if (isMoesStarFeatherSwitch()) {
+    if (isZemismartScreenSwitch()) {
+        String childId = getChildId(childDevice)
+        if (!(childId in ['01', '02', '03', '04'])) { return }
+        sendZigbeeCommands(getTuyaCommand(childId, DP_TYPE_BOOL, '01'))
+    } else if (isMoesStarFeatherSwitch()) {
         // Star Feather switches use different data points: 0x18(24), 0x19(25), 0x1A(26), 0x1B(27)
         String childId = getChildId(childDevice)
         int dpValue = 0x18 + (childId as int) - 1  // Convert to hex: 01->0x18, 02->0x19, etc.
@@ -1177,7 +1343,11 @@ void componentOff(childDevice) {
     if (debugLogging) { log.debug "component state is OFF - ${childDevice} {${childDevice.deviceNetworkId}}" }
     if (infoLogging) { log.info "${childDevice} is OFF" }
     
-    if (isMoesStarFeatherSwitch()) {
+    if (isZemismartScreenSwitch()) {
+        String childId = getChildId(childDevice)
+        if (!(childId in ['01', '02', '03', '04'])) { return }
+        sendZigbeeCommands(getTuyaCommand(childId, DP_TYPE_BOOL, '00'))
+    } else if (isMoesStarFeatherSwitch()) {
         // Star Feather switches use different data points: 0x18(24), 0x19(25), 0x1A(26), 0x1B(27)
         String childId = getChildId(childDevice)
         int dpValue = 0x18 + (childId as int) - 1  // Convert to hex: 01->0x18, 02->0x19, etc.
@@ -1238,6 +1408,7 @@ void componentOff(childDevice) {
 }
 
 void componentRefresh(childDevice) {
+    if (isZemismartScreenSwitch()) { refresh(); return }
     if (debugLogging) { log.debug "component refresh ${childDevice.deviceNetworkId} ${childDevice}" }
     sendHubCommand(new HubAction("he rattr 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00", Protocol.ZIGBEE))
     if (debugLogging) { log.debug "{executed} 0x${device.deviceNetworkId} 0x${device.endpointId} 0xEF00 0x00" }
@@ -1282,6 +1453,7 @@ void setupChildDevices() {
             buttons = 3
             break
         case '_TZE200_k6jhsr0q' :
+        case '_TZE284_xibaabmu' : // Zemismart 4-gang screen switch
         case '_TZE200_aqnazj70' :
         case '_TZE200_1ozguk6x' :
         case '_TZE200_mexisfik' :
@@ -1381,8 +1553,31 @@ void deleteObsoleteChildren() {
     }
 }
 
+List<String> screenLabelConfig() {
+    List<String> cmds = []
+    if (!isZemismartScreenSwitch()) { return cmds }
+    Map requests = [:] + (state.screenLabelRequests ?: [:])
+    for (int gang = 1; gang <= 4; gang++) {
+        String key = gang.toString()
+        String text = settings["screenLabel${gang}"] ?: ''
+        // Unconfigured blanks leave factory labels alone. Clearing a previously sent label is explicit.
+        if ((!requests.containsKey(key) && text.trim().isEmpty()) || requests[key] == text) { continue }
+        if (!validScreenText(text)) {
+            log.warn "Invalid display label ${gang}: maximum 12 UTF-16 units of valid text"
+            continue
+        }
+        cmds += getTuyaCommand(zigbee.convertToHexString(104 + gang, 2), DP_TYPE_RAW, screenTextHex(text))
+        requests[key] = text
+        if (infoLogging) { log.info "Setting display label ${gang} to ${text}" }
+    }
+    state.screenLabelRequests = requests
+    // Requested values remain separate from screenLabelN attributes populated by reports.
+    return cmds
+}
+
 List<String> switchLightModeConfig() {
     List<String> cmds = []
+    if (isZemismartScreenSwitch()) { return cmds }
     if (isTratoZemismartKeypad()) {
         int bl = settings?.switchLightMode == 'on' ? 1 : 0
         String dpValHex = zigbee.convertToHexString(bl as int, 2)
@@ -1422,6 +1617,7 @@ List<String> switchLightModeConfig() {
 
 List<String> powerOnBehaviorConfig() {
     List<String> cmds = []
+    if (isZemismartScreenSwitch()) { return cmds }
     if (isTratoZemismartKeypad()) {
         int rl = settings?.powerOnBehavior == 'off' ? 0 : settings?.powerOnBehavior == 'on' ? 1 : 2
         if (debugLogging) { log.debug "Relay mode: ${rl} (${settings?.powerOnBehavior})" }
@@ -1532,7 +1728,12 @@ List<String> momentaryConfig() {
 
 void queryAllTuyaDP() {
     log.trace 'queryAllTuyaDP()'
-    List<String> cmds = zigbee.command(0xEF00, 0x03)
+    List<String> cmds = []
+    if (isZemismartScreenSwitch()) {
+        // Tuya configureMagicPacket, followed by the normal DP query through refresh().
+        cmds += zigbee.readAttribute(0x0000, [0x0004, 0x0000, 0x0001, 0x0005, 0x0007, 0xFFFE], [destEndpoint:1], 1000)
+    }
+    cmds += zigbee.command(0xEF00, 0x03)
     sendZigbeeCommands(cmds)
 }
 
