@@ -35,12 +35,13 @@
  *  revision 1.5.1 - 2026-06-03 - kkossev - added Quero automatização 1-gang _TZE284_nzns7udm, 2-gang _TZE284_1aqlsquf, 3-gang _TZE284_pgxndxp4; renamed _TZE284_ms97nkyy to 'Quero automatização 6-gang switch'; each Quero N-gang device creates N physical + N virtual child switches;
  *  revision 1.5.2 - 2026-06-21 - Nathanael-Shermett - added setPreference command
  *  revision 1.5.3 - 2026-09-30 - kkossev - added Zemismart _TZE284_xibaabmu 4-gang control and screen labels @marcusvrsilva
+ *  revision 1.5.4 - 2026-11-23 - Nathanael-Shermett - fixed preferences resetting to defaults on hub reboot
  *
  *
 */
 
-static String version() { '1.5.3' }
-static String timeStamp() { '2026/09/30 08:57 AM' }
+static String version() { '1.5.4' }
+static String timeStamp() { '2026/11/23 09:44 AM' }
 import hubitat.device.HubAction
 import hubitat.device.Protocol
 import groovy.transform.Field
@@ -319,7 +320,6 @@ void initializeVars() {
 def initialize() {
     if (infoLogging) { log.info 'Initializing...' }
     log.warn 'Debug logging will be automatically disabled after 24 hours!'
-    initializeVars()
     setupChildDevices()
     if (debugLogging) { runIn(86400, logsOff) }
     refresh()
